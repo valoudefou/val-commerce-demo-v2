@@ -11,4 +11,10 @@ export interface Product {
   inStock: boolean
   colors: string[]
   sizes: string[]
+  brand?: string
+  stock?: number
+  discountPercentage?: number
+  availabilityStatus?: string
+  returnPolicy?: string
+  link?: string
 }

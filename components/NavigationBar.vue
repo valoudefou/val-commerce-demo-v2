@@ -5,7 +5,7 @@
         <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600">
           <ShoppingBagIcon class="h-6 w-6" />
         </span>
-        Val Commerce
+        Commerce Demo
       </NuxtLink>
       <div class="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
         <NuxtLink v-for="item in navigation" :key="item.href" :to="item.href" class="hover:text-primary-600">

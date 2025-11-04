@@ -1,8 +1,8 @@
-import { products } from '@/data/products'
+import { findProductBySlug } from '@/server/utils/products'
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const { slug } = getRouterParams(event)
-  const product = products.find((item) => item.slug === slug)
+  const product = await findProductBySlug(slug)
 
   if (!product) {
     throw createError({ statusCode: 404, statusMessage: 'Product not found' })

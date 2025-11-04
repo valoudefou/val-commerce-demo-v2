@@ -25,7 +25,7 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   runtimeConfig: {
     public: {
-      companyName: 'Val Commerce',
+      companyName: 'Commerce Demo',
       supportEmail: 'hello@valcommerce.demo'
     }
   },

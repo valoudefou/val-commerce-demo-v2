@@ -1,5 +1,5 @@
-import { products } from '@/data/products'
+import { fetchProducts } from '@/server/utils/products'
 
-export default defineEventHandler(() => {
-  return products
+export default defineEventHandler(async () => {
+  return await fetchProducts()
 })

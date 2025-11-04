@@ -648,7 +648,7 @@ const _inlineRuntimeConfig = {
     }
   },
   "public": {
-    "companyName": "Val Commerce",
+    "companyName": "Commerce Demo",
     "supportEmail": "hello@valcommerce.demo"
   }
 };
@@ -2202,88 +2202,93 @@ const styles$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   default: styles
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const products = [
-  {
-    id: 1,
-    slug: "arctic-summit-parka",
-    name: "Arctic Summit Parka",
-    description: "Premium insulated parka with responsibly sourced down fill and water-resistant shell, perfect for urban adventures and alpine escapes.",
-    price: 349,
-    category: "Outerwear",
-    image: "/images/arctic-summit-parka.svg",
-    rating: 4.8,
-    highlights: [
-      "700-fill responsibly sourced down",
-      "Recycled water-resistant outer shell",
-      "Detachable faux-fur hood trim",
-      "Interior media pocket with headphone routing"
-    ],
-    inStock: true,
-    colors: ["Midnight Navy", "Glacier White", "Ember Red"],
-    sizes: ["XS", "S", "M", "L", "XL"]
-  },
-  {
-    id: 2,
-    slug: "coastal-breeze-knit",
-    name: "Coastal Breeze Knit",
-    description: "Lightweight merino blend sweater that balances breathability with warmth for an effortless, everyday layer.",
-    price: 129,
-    category: "Knitwear",
-    image: "/images/coastal-breeze-knit.svg",
-    rating: 4.6,
-    highlights: [
-      "Sustainable merino wool blend",
-      "Machine washable and pill-resistant",
-      "Tailored yet relaxed silhouette",
-      "Breathable open-stitch pattern"
-    ],
-    inStock: true,
-    colors: ["Seafoam", "Sandstone", "Deep Charcoal"],
-    sizes: ["XS", "S", "M", "L", "XL", "XXL"]
-  },
-  {
-    id: 3,
-    slug: "skyline-tech-trousers",
-    name: "Skyline Tech Trousers",
-    description: "Streamlined trousers with four-way stretch and water-repellent finish to keep you comfortable on commutes and long-haul journeys.",
-    price: 159,
-    category: "Bottoms",
-    image: "/images/skyline-tech-trousers.svg",
-    rating: 4.7,
-    highlights: [
-      "Four-way stretch technical fabric",
-      "Moisture-wicking interior waistband",
-      "Hidden zip pocket for essentials",
-      "Wrinkle-resistant and travel-ready"
-    ],
-    inStock: false,
-    colors: ["Carbon Black", "Storm Grey"],
-    sizes: ["28", "30", "32", "34", "36"]
-  },
-  {
-    id: 4,
-    slug: "lumina-city-backpack",
-    name: "Lumina City Backpack",
-    description: "Versatile commuter backpack featuring padded laptop storage, quick-access pockets, and reflective accents for low-light commutes.",
-    price: 189,
-    category: "Accessories",
-    image: "/images/lumina-city-backpack.svg",
-    rating: 4.9,
-    highlights: [
-      "20L capacity with modular organization",
-      "Water-resistant zippers and fabric",
-      "Ventilated back panel with luggage pass-through",
-      "USB passthrough for portable chargers"
-    ],
-    inStock: true,
-    colors: ["Obsidian", "Mineral Blue"],
-    sizes: ["One Size"]
+const PRODUCT_SOURCE_URL = "https://live-server1.vercel.app/products";
+const CACHE_TTL = 1e3 * 60 * 5;
+let cachedProducts = null;
+let lastFetch = 0;
+const parseNumber = (value) => {
+  if (value === null || value === void 0) {
+    return 0;
   }
-];
+  const numeric = typeof value === "string" ? Number.parseFloat(value) : value;
+  return Number.isFinite(numeric) ? Number(numeric) : 0;
+};
+const slugify = (value, fallback) => {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return normalized.length > 0 ? normalized : fallback;
+};
+const toProduct = (raw) => {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  const id = parseNumber(raw.id);
+  const price = Math.max(parseNumber((_a = raw.price) != null ? _a : raw.price_before_discount), 0);
+  const rating = Math.min(Math.max(parseNumber(raw.rating), 0), 5);
+  const stock = Math.max(parseNumber(raw.stock), 0);
+  const discount = parseNumber(raw.discountPercentage);
+  const availability = (_c = (_b = raw.availabilityStatus) == null ? void 0 : _b.trim()) != null ? _c : "";
+  const highlightItems = [
+    raw.brand ? `Brand: ${raw.brand}` : null,
+    discount > 0 ? `Save ${discount.toFixed(0)}% today` : null,
+    raw.returnPolicy ? `Returns: ${raw.returnPolicy}` : null,
+    availability ? `Availability: ${availability}` : null
+  ].filter((item) => Boolean(item));
+  if (highlightItems.length === 0) {
+    highlightItems.push("Curated selection from Val Commerce partners.");
+  }
+  const tagSet = /* @__PURE__ */ new Set();
+  if (raw.category) tagSet.add(raw.category);
+  if (raw.brand) tagSet.add(raw.brand);
+  if (raw.tag) tagSet.add(raw.tag);
+  const tags = Array.from(tagSet);
+  const slugBase = slugify((_d = raw.title) != null ? _d : `product-${id}`, `product-${id}`);
+  const slug = `${slugBase}-${id}`;
+  return {
+    id,
+    slug,
+    name: (_e = raw.title) != null ? _e : `Product ${id}`,
+    description: (_f = raw.description) != null ? _f : "",
+    price,
+    category: (_g = raw.category) != null ? _g : "General",
+    image: (_h = raw.thumbnail) != null ? _h : "",
+    rating,
+    highlights: highlightItems,
+    inStock: availability.toLowerCase() === "in stock" || stock > 0,
+    colors: tags,
+    sizes: ["One Size"],
+    brand: (_i = raw.brand) != null ? _i : void 0,
+    stock,
+    discountPercentage: discount,
+    availabilityStatus: availability || void 0,
+    returnPolicy: (_j = raw.returnPolicy) != null ? _j : void 0,
+    link: (_k = raw.link) != null ? _k : void 0
+  };
+};
+const fetchProducts = async () => {
+  const now = Date.now();
+  if (cachedProducts && now - lastFetch < CACHE_TTL) {
+    return cachedProducts;
+  }
+  try {
+    const { products } = await $fetch(PRODUCT_SOURCE_URL);
+    const mapped = products.map(toProduct);
+    cachedProducts = mapped;
+    lastFetch = now;
+    return mapped;
+  } catch (error) {
+    console.error("Failed to load products from remote source", error);
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Unable to load product catalog right now."
+    });
+  }
+};
+const findProductBySlug = async (slug) => {
+  const products = await fetchProducts();
+  return products.find((product) => product.slug === slug);
+};
 
-const _slug__get = defineEventHandler((event) => {
+const _slug__get = defineEventHandler(async (event) => {
   const { slug } = getRouterParams(event);
-  const product = products.find((item) => item.slug === slug);
+  const product = await findProductBySlug(slug);
   if (!product) {
     throw createError({ statusCode: 404, statusMessage: "Product not found" });
   }
@@ -2295,8 +2300,8 @@ const _slug__get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
   default: _slug__get
 }, Symbol.toStringTag, { value: 'Module' }));
 
-const index_get = defineEventHandler(() => {
-  return products;
+const index_get = defineEventHandler(async () => {
+  return await fetchProducts();
 });
 
 const index_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
