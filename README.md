@@ -1,8 +1,8 @@
-# Val Commerce Demo
+# Nuxt 3 Commerce Demo
 
 <img src="https://content.partnerpage.io/eyJidWNrZXQiOiJwYXJ0bmVycGFnZS5wcm9kIiwia2V5IjoibWVkaWEvY29udGFjdF9pbWFnZXMvMDUwNGZlYTYtOWIxNy00N2IyLTg1YjUtNmY5YTZjZWU5OTJiLzI1NjhmYjk4LTQwM2ItNGI2OC05NmJiLTE5YTg1MzU3ZjRlMS5wbmciLCJlZGl0cyI6eyJ0b0Zvcm1hdCI6IndlYnAiLCJyZXNpemUiOnsid2lkdGgiOjEyMDAsImhlaWdodCI6NjI3LCJmaXQiOiJjb250YWluIiwiYmFja2dyb3VuZCI6eyJyIjoyNTUsImciOjI1NSwiYiI6MjU1LCJhbHBoYSI6MH19fX0=" alt="AB Tasty logo" width="350"/>
 
-A modern ecommerce experience built with [Nuxt 3](https://nuxt.com) and [Vue 3](https://vuejs.org). The demo showcases a high-end apparel brand with product listings, detailed product pages, a persistent cart, editorial storytelling, and marketing capture moments. The project is configured to deploy easily to [Vercel](https://vercel.com/).
+A modern ecommerce experience built with [Nuxt 3](https://nuxt.com) and [Vue 3](https://vuejs.org). The demo showcases a high-end apparel brand with product listings, detailed product pages, a persistent cart, editorial storytelling, and marketing capture moments.
 
 ## Features
 
@@ -10,7 +10,7 @@ A modern ecommerce experience built with [Nuxt 3](https://nuxt.com) and [Vue 3](
 - 🎨 Responsive Tailwind CSS design with reusable Vue components
 - 🛒 Persistent cart composable with add, update, and remove capabilities
 - 📚 Editorial storytelling and marketing sections to show brand narrative
-- ☁️ Ready-to-deploy configuration for Vercel hosting
+- 🌍 Server-rendered architecture ready for Node, serverless, or edge runtimes
 - 🧪 Feature flagging with Flagship, pre-rendered on the server and revalidated client-side without UI flicker
 
 ## Getting started
@@ -55,7 +55,7 @@ NUXT_FLAGSHIP_API_KEY=your-flagship-api-key
 This project uses Nuxt 3’s hybrid rendering model:
 
 - **File-based routing** powers both pages and server APIs (`pages/` and `server/api/`).
-- **Nitro server** handles server-side rendering, API routes, and deployment portability (Vercel ready).
+- **Nitro server** handles server-side rendering, API routes, and deployment portability across Node, serverless, or edge platforms.
 - **Composables** under `composables/` provide reusable logic (cart management, products fetching, etc.).
 - **TypeScript-first** configuration with full type checking (`vue-tsc`) ensures editor support and safe refactors.
 
@@ -67,34 +67,30 @@ Key Nuxt configuration highlights (`nuxt.config.ts`):
 
 ## Flagship feature flag integration
 
-Flagship drives the “Apple Pay” quick checkout button on product pages. The integration has two layers to guarantee a fast, flicker-free experience:
+Flagship drives the “Apple Pay” quick checkout button on product pages. The integration has two layers to guarantee a fast, flicker-free experience while keeping the SSR response and hydrated client in sync:
 
 1. **Server-side evaluation (SSR)**  
-   - When a product page is rendered, Nuxt calls `GET /api/features/apple-pay`.  
-   - This endpoint uses the server-side Flagship SDK (`server/utils/flagship/index.ts`) to:
-     - Resolve the visitor ID (with cookie persistence).
-     - Fetch the `paymentFeature1Click` flag.
-     - Return `{ enabled: boolean }` to the page.
-   - The Nuxt page consumes that flag via `useFetch` in setup, so the button is already shown/hidden in the HTML streamed to the browser. No flash of incorrect UI occurs.
+   - Nuxt renders the page by calling `GET /api/features/apple-pay`.
+   - The endpoint boots the shared Flagship SDK (`server/utils/flagship/index.ts`), derives a visitor ID from cookies (creating one if needed), and fetches the `paymentFeature1Click` flag.
+   - It returns `{ enabled: boolean }`, and the page reads that value through `useFetch` during setup. Because this happens before the response leaves the server, the HTML already reflects the correct Apple Pay state—no flash of incorrect UI.
+   - The server also logs the evaluated value (with sensitive data scrubbed) so you can trace decisions when debugging.
 
 2. **Client-side confirmation**  
-   - On mount, the product page calls `initializeFlagship` from `utils/flagship/index.ts` (a browser-safe wrapper around Flagship’s JS SDK).
-   - It re-fetches flags for the same visitor and updates the reactive state if anything changes.  
-   - Because the initial state is consistent with the server output, the user never sees a mismatch, and updates happen instantly if the flag’s targeting changes mid-session.
+   - After hydration, the page optionally revalidates via `initializeFlagship` in `utils/flagship/index.ts`, a browser-safe helper that reads the public runtime config.
+   - The helper starts the client SDK once, reuses the same visitor context, and fetches the latest flags.
+   - The reactive state updates only if a value changes mid-session; otherwise the server-supplied state persists without any perceptible update.
+
+### How the helper bridges SSR and the client
+
+- `server/utils/flagship/index.ts` exposes `initializeFlagship` for server code. It caches the SDK instance, handles credential lookup (private runtime config first, public fallback), and fetches flags.
+- `utils/flagship/index.ts` mirrors the API for the browser. It guards against SSR usage, boots the client SDK once, and shares the same visitor/context signature so values stay aligned.
+- `pages/products/[slug].vue` calls the server endpoint inside `useFetch` during setup, then invokes the browser helper inside `onMounted`. The Apple Pay button simply reacts to a `ref`, so both phases share the same codepath.
+- Because the button state is derived from a single source of truth, the UI remains stable and any flag flip propagates immediately without reloads.
 
 Logging and sanitisation:
 
 - Custom log manager redacts sensitive data before storing messages.
 - Structured logs (visitor ID, flag value, SDK status) are emitted in development for observability.
-
-## Deployment on Vercel
-
-The project includes a `vercel.json` file and Nuxt Nitro configuration to target the Vercel runtime. To deploy:
-
-1. Push the repository to GitHub (or your preferred Git provider).
-2. Import the project into Vercel and select the repository.
-3. Use the default build command (`npm run build`) and install command (`npm install`).
-4. Vercel will detect the Nuxt framework, build the application, and provision serverless functions automatically.
 
 ## Project structure
 
@@ -109,8 +105,7 @@ The project includes a `vercel.json` file and Nuxt Nitro configuration to target
 ├── public/
 ├── server/
 ├── types/
-├── nuxt.config.ts
-└── vercel.json
+└── nuxt.config.ts
 ```
 
 Feel free to adapt the content, styling, and data model to suit your own brand.
