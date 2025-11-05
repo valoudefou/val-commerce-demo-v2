@@ -138,13 +138,16 @@ const runFlagship = async () => {
     })
 
     const flag = visitor.getFlag('paymentFeature1Click')
-    const flagValue = flag.getValue(false)
+    const rawValue = flag.getValue('false')
+    const flagEnabled =
+      typeof rawValue === 'string' ? rawValue.trim().toLowerCase() === 'true' : Boolean(rawValue)
 
-    applePayEnabled.value = Boolean(flagValue)
+    applePayEnabled.value = flagEnabled
 
     console.log('Flagship paymentFeature1Click flag', {
       visitorId: visitor.visitorId,
-      value: flagValue
+      rawValue,
+      enabled: flagEnabled
     })
   } catch (error) {
     console.error('Failed to evaluate Flagship paymentFeature1Click flag', error)

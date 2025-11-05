@@ -31,11 +31,16 @@ export default defineEventHandler(async (event) => {
     })
 
     const flag = visitor.getFlag(APPLE_PAY_FLAG_KEY)
-    const enabled = Boolean(flag.getValue<boolean>(false))
+    const rawValue = flag.getValue('false')
+    const enabled =
+      typeof rawValue === 'string'
+        ? rawValue.trim().toLowerCase() === 'true'
+        : Boolean(rawValue)
 
     console.log('Flagship feature evaluation', {
       visitorId,
       flagKey: APPLE_PAY_FLAG_KEY,
+      rawValue,
       enabled,
       flagsStatus: visitor.flagsStatus
     })
