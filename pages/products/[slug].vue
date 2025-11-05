@@ -77,7 +77,7 @@
           :disabled="!product.inStock"
           @click="beginApplePay"
         >
-          <span aria-hidden="true" class="apple-pay-button__icon">
+          <span aria-hidden="true" class="w-16">
             <svg
               viewBox="-76.79115 -52.55 665.5233 315.3"
               xmlns="http://www.w3.org/2000/svg"
@@ -90,7 +90,6 @@
               />
             </svg>
           </span>
-          <span aria-hidden="true" class="apple-pay-button__label">Pay</span>
           <span class="sr-only">Buy now with Apple Pay</span>
         </button>
 
@@ -110,20 +109,53 @@
 
 <script setup lang="ts">
 import { ArrowLeftIcon, CheckCircleIcon, ShoppingCartIcon } from '@heroicons/vue/24/solid'
+import { initializeFlagship } from '@/utils/flagship'
 
 const route = useRoute()
 const cart = useCart()
 const notifications = useNotifications()
 const { findBySlug } = useProducts()
 
-const { data: applePayFlag } = await useFetch<{ enabled: boolean }>('/api/features/apple-pay', {
+const { data: applePayFeature } = await useFetch<{ enabled: boolean }>('/api/features/apple-pay', {
+  server: true,
   default: () => ({ enabled: false })
 })
 
 const product = await findBySlug(route.params.slug as string)
 
 const selectedSize = ref(product.sizes[0])
-const applePayEnabled = computed(() => applePayFlag.value?.enabled ?? false)
+const applePayEnabled = ref(Boolean(applePayFeature.value?.enabled))
+
+const runFlagship = async () => {
+  if (!import.meta.client) return
+
+  try {
+    const visitor = await initializeFlagship({
+      visitorId: route.params.slug ? `visitor-${route.params.slug}` : 'guest',
+      context: {
+        status: 'returning'
+      }
+    })
+
+    const flag = visitor.getFlag('paymentFeature1Click')
+    const flagValue = flag.getValue(false)
+
+    applePayEnabled.value = Boolean(flagValue)
+
+    console.log('Flagship paymentFeature1Click flag', {
+      visitorId: visitor.visitorId,
+      value: flagValue
+    })
+  } catch (error) {
+    console.error('Failed to evaluate Flagship paymentFeature1Click flag', error)
+  }
+}
+
+if (import.meta.client) {
+  onMounted(() => {
+    runFlagship()
+  })
+}
 
 const addToCart = () => {
   if (!product.inStock) return
@@ -182,6 +214,7 @@ useHead({ title: `${product.name} – Val Commerce` })
   font-weight: 600;
   letter-spacing: 0.04em;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  appearance: none;
   -webkit-appearance: -apple-pay-button;
   -apple-pay-button-type: buy;
   -apple-pay-button-style: black;

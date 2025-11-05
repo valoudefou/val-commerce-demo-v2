@@ -68,8 +68,9 @@ const ensureFlagshipStarted = () => {
 
   const config = useRuntimeConfig()
   const flagshipConfig = (config.flagship ?? {}) as { envId?: string; apiKey?: string }
-  const envId = flagshipConfig.envId
-  const apiKey = flagshipConfig.apiKey
+  const publicFlagship = (config.public?.flagship ?? {}) as { envId?: string; apiKey?: string }
+  const envId = flagshipConfig.envId || publicFlagship.envId
+  const apiKey = flagshipConfig.apiKey || publicFlagship.apiKey
 
   if (!envId || !apiKey) {
     throw createError({

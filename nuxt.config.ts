@@ -1,4 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+const env =
+  ((globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env) ||
+  {}
+
 export default defineNuxtConfig({
   app: {
     head: {
@@ -25,12 +29,16 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   runtimeConfig: {
     flagship: {
-      envId: '',
-      apiKey: ''
+      envId: env.NUXT_FLAGSHIP_ENV_ID || '',
+      apiKey: env.NUXT_FLAGSHIP_API_KEY || ''
     },
     public: {
       companyName: 'Commerce Demo',
-      supportEmail: 'hello@valcommerce.demo'
+      supportEmail: 'hello@valcommerce.demo',
+      flagship: {
+        envId: env.NUXT_FLAGSHIP_ENV_ID || '',
+        apiKey: env.NUXT_FLAGSHIP_API_KEY || ''
+      }
     }
   },
   nitro: {
