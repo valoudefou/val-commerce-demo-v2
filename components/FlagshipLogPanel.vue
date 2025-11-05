@@ -82,7 +82,7 @@
                 class="flex h-full items-center justify-center rounded-lg border border-dashed border-emerald-500/30 bg-emerald-500/5 py-6 text-sm text-emerald-300/70"
               >
                 <span v-if="searchTerm">No Flagship log entries match your search.</span>
-                <span v-else>Waiting for Flagship activity…</span>
+                <span v-else>Waiting for flag activity…</span>
               </div>
               <div v-else class="space-y-3">
                 <article
