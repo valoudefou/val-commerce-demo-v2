@@ -1,6 +1,7 @@
 import { Flagship, LogLevel, type Visitor } from '@flagship.io/js-sdk'
 
 import { flagshipLogStore } from '@/utils/flagship/logStore'
+import { flagshipLogManager } from '@/utils/flagship/logManager'
 
 type InitializeOptions = {
   visitorId: string
@@ -27,7 +28,8 @@ const ensureClientFlagshipStarted = () => {
 
   Flagship.start(envId, apiKey, {
     fetchNow: false,
-    logLevel: LogLevel.INFO
+    logLevel: LogLevel.ALL,
+    logManager: flagshipLogManager
   })
 
   flagshipStarted = true

@@ -5,7 +5,7 @@ import { resolve, dirname, join } from 'node:path';
 import nodeCrypto from 'node:crypto';
 import { parentPort, threadId } from 'node:worker_threads';
 import { escapeHtml } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/@vue/shared/dist/shared.cjs.js';
-import { Flagship, LogLevel } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/@flagship.io/js-sdk/dist/index.node.esm.mjs';
+import { LogLevel, Flagship } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/@flagship.io/js-sdk/dist/index.node.esm.mjs';
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/vue-bundle-renderer/dist/runtime.mjs';
 import { parseURL, withoutBase, joinURL, getQuery, withQuery, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, joinRelativeURL } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/ufo/dist/index.mjs';
 import { renderToString } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/vue/server-renderer/index.mjs';
@@ -2324,48 +2324,76 @@ const resolveLevelName = (level) => {
   const value = typeof level === "number" ? LogLevel[level] : level;
   return value != null ? value : "INFO";
 };
-const customLog = {
-  emergency(message, tag) {
-    this.log(LogLevel.EMERGENCY, message, tag);
-  },
-  alert(message, tag) {
-    this.log(LogLevel.ALERT, message, tag);
-  },
-  critical(message, tag) {
-    this.log(LogLevel.CRITICAL, message, tag);
-  },
-  error(message, tag) {
-    this.log(LogLevel.ERROR, message, tag);
-  },
-  warning(message, tag) {
-    this.log(LogLevel.WARNING, message, tag);
-  },
-  notice(message, tag) {
-    this.log(LogLevel.NOTICE, message, tag);
-  },
-  info(message, tag) {
-    this.log(LogLevel.INFO, message, tag);
-  },
-  debug(message, tag) {
-    this.log(LogLevel.DEBUG, message, tag);
-  },
-  log(level, message, tag) {
-    const levelName = resolveLevelName(level);
-    const logEntry = {
-      timestamp: (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false
-      }),
-      level: levelName,
-      message,
-      tag
-    };
-    console.log(`[${logEntry.level}] [${tag != null ? tag : "flagship"}]: ${message}`);
-    flagshipLogStore.addLog(logEntry);
+const nowLabel = () => (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: true
+});
+const consoleMethodFor = (level) => {
+  switch (level) {
+    case "EMERGENCY":
+    case "ALERT":
+    case "CRITICAL":
+    case "ERROR":
+      return "error";
+    case "WARNING":
+      return "warn";
+    case "NOTICE":
+    case "INFO":
+      return "info";
+    case "DEBUG":
+    default:
+      return "debug";
   }
 };
+const pushLog = (level, message, tag, context) => {
+  const levelName = resolveLevelName(level);
+  const timestamp = nowLabel();
+  const logEntry = {
+    timestamp,
+    level: levelName,
+    message,
+    tag
+  };
+  if (context.length > 0) {
+    logEntry.details = context.length === 1 ? context[0] : context;
+  }
+  flagshipLogStore.addLog(logEntry);
+  const method = consoleMethodFor(levelName);
+  const prefix = `[${timestamp}] [${levelName}] [${tag != null ? tag : "flagship"}]`;
+  console[method](prefix, message, ...context);
+};
+const flagshipLogManager = {
+  emergency(message, tag, ...context) {
+    pushLog(LogLevel.EMERGENCY, message, tag, context);
+  },
+  alert(message, tag, ...context) {
+    pushLog(LogLevel.ALERT, message, tag, context);
+  },
+  critical(message, tag, ...context) {
+    pushLog(LogLevel.CRITICAL, message, tag, context);
+  },
+  error(message, tag, ...context) {
+    pushLog(LogLevel.ERROR, message, tag, context);
+  },
+  warning(message, tag, ...context) {
+    pushLog(LogLevel.WARNING, message, tag, context);
+  },
+  notice(message, tag, ...context) {
+    pushLog(LogLevel.NOTICE, message, tag, context);
+  },
+  info(message, tag, ...context) {
+    pushLog(LogLevel.INFO, message, tag, context);
+  },
+  debug(message, tag, ...context) {
+    pushLog(LogLevel.DEBUG, message, tag, context);
+  },
+  log(level, message, tag, ...context) {
+    pushLog(level, message, tag, context);
+  }
+};
+
 let flagshipStarted = false;
 const ensureFlagshipStarted = () => {
   var _a, _b, _c;
@@ -2383,7 +2411,7 @@ const ensureFlagshipStarted = () => {
   }
   Flagship.start(envId, apiKey, {
     fetchNow: false,
-    logManager: customLog,
+    logManager: flagshipLogManager,
     logLevel: LogLevel.ALL
   });
   flagshipStarted = true;

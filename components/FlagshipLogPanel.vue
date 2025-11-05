@@ -1,65 +1,145 @@
 <template>
-  <div class="fixed inset-x-0 top-0 z-50 flex justify-center px-4 py-3 pointer-events-none">
-    <transition name="fade">
-      <div
+  <div class="pointer-events-none fixed inset-x-0 bottom-0 z-50">
+    <transition name="slide-up">
+      <section
         v-if="isOpen"
-        class="pointer-events-auto w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-950/95 p-4 shadow-xl shadow-slate-950/60 backdrop-blur"
+        class="pointer-events-auto w-full border-t border-emerald-500/30 bg-slate-950/95 px-6 pt-5 pb-3 shadow-[0_-18px_60px_-35px_rgba(16,185,129,0.8)] backdrop-blur"
+        :style="{ height: `${panelHeight}px` }"
       >
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">Flagship Logs</h2>
-          <button
-            type="button"
-            class="rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300 transition hover:border-slate-500 hover:text-white"
-            @click="isOpen = false"
+        <!-- Updated: More prominent integrated resize handle with decreased shadow -->
+        <div
+          class="absolute inset-x-0 top-0 h-10 -translate-y-full cursor-ns-resize flex items-center justify-center gap-3
+                 bg-emerald-600/30 hover:bg-emerald-600/40 transition-colors duration-150
+                 shadow-[0_-5px_15px_-5px_rgba(16,185,129,0.4)] hover:shadow-[0_-5px_20px_-5px_rgba(16,185,129,0.6)]"
+          :class="{ 'bg-emerald-600/50 shadow-[0_-5px_25px_-5px_rgba(16,185,129,0.8)]': isResizing }"
+          @mousedown.prevent="startResize"
+          @touchstart.prevent="startResize"
+        >
+          <svg
+            class="h-6 w-6 text-emerald-100 animate-pulse-slow"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            Close
-          </button>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M7 11l5-5m0 0l5 5m-5-5v12"
+            ></path>
+          </svg>
+          <span class="text-sm font-bold uppercase tracking-widest text-emerald-100">Drag to Resize</span>
         </div>
-        <div class="mt-3 max-h-60 overflow-y-auto pr-1 text-xs text-slate-200">
-          <div
-            v-if="logs.length === 0"
-            class="rounded-lg border border-dashed border-slate-800 bg-slate-900/60 p-4 text-center text-slate-500"
-          >
-            No Flagship log entries yet.
-          </div>
-          <div v-else class="space-y-3">
-            <div
-              v-for="(log, index) in logs"
-              :key="`${log.timestamp}-${index}`"
-              class="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
-            >
-              <div class="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                <span>{{ log.timestamp }}</span>
-                <span>•</span>
-                <span :class="levelColor(log.level)">{{ log.level }}</span>
-                <span v-if="log.tag">• {{ log.tag }}</span>
+
+        <div class="mx-auto flex h-full max-w-6xl flex-col gap-3">
+          <header class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3 text-[11px] uppercase tracking-[0.35em] text-emerald-200/80">
+              <span class="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400/90"></span>
+              <span>AB Tasty Logs</span>
+            </div>
+            <div class="flex flex-1 items-center justify-between gap-3 text-[11px] text-emerald-300/70">
+              <span class="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-[2px] font-semibold">
+                {{ filteredCountLabel }}
+              </span>
+              <label class="relative inline-flex items-center">
+                <span class="sr-only">Search logs</span>
+                <svg
+                  class="pointer-events-none absolute left-3 h-4 w-4 text-emerald-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <!-- MODIFIED: Search input with reduced letter spacing and no extra border/ring on focus -->
+                <input
+                  v-model="searchTerm"
+                  type="search"
+                  placeholder="Search logs..."
+                  class="w-56 rounded-full border border-emerald-400 bg-slate-800/80 px-10 py-2 text-sm tracking-wide text-emerald-100 placeholder:text-emerald-300/70 focus:border-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-300/40 sm:w-80"
+                />
+              </label>
+              <button
+                type="button"
+                class="rounded-full border border-emerald-500/30 bg-transparent px-3 py-1.5 text-sm font-medium uppercase tracking-[0.2em] text-emerald-300 transition hover:border-emerald-400 hover:text-emerald-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400"
+                @click="isOpen = false"
+              >
+                Hide
+              </button>
+            </div>
+          </header>
+
+          <div class="flex-1 overflow-hidden rounded-xl border border-emerald-500/15 bg-black/40 shadow-inner">
+            <div class="h-full overflow-y-auto p-3 text-[12px] text-emerald-200">
+              <div
+                v-if="filteredLogs.length === 0"
+                class="flex h-full items-center justify-center rounded-lg border border-dashed border-emerald-500/30 bg-emerald-500/5 py-6 text-sm text-emerald-300/70"
+              >
+                <span v-if="searchTerm">No Flagship log entries match your search.</span>
+                <span v-else>Waiting for Flagship activity…</span>
               </div>
-              <div class="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-slate-200">
-                {{ stringify(log.message) }}
-              </div>
-              <div v-if="supplementalKeys(log).length" class="mt-2 space-y-1 text-[11px] text-slate-400">
-                <div v-for="key in supplementalKeys(log)" :key="key">
-                  <span class="font-semibold text-slate-300">{{ key }}:</span>
-                  <span class="ml-1 font-mono text-[11px] text-slate-300">{{ stringify(log[key]) }}</span>
-                </div>
+              <div v-else class="space-y-3">
+                <article
+                  v-for="(log, index) in filteredLogs"
+                  :key="`${log.timestamp}-${index}`"
+                  class="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 shadow-sm shadow-emerald-900/20 transition hover:border-emerald-400/50"
+                >
+                  <div class="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.25em] text-emerald-300/80">
+                    <span>{{ formatTimestamp(log.timestamp) }}</span>
+                    <span class="text-emerald-500/40">•</span>
+                    <span
+                      :class="levelTone(log.level)"
+                      class="rounded-full border border-current bg-transparent px-2 py-[2px] text-[10px] font-bold"
+                    >
+                      {{ log.level }}
+                    </span>
+                    <span v-if="log.tag" class="rounded-full border border-emerald-500/20 px-2 py-[2px] text-[10px] font-medium text-emerald-200/80">
+                      {{ log.tag }}
+                    </span>
+                  </div>
+                  <pre class="mt-2 whitespace-pre-wrap break-words font-mono text-[12px] leading-6 text-emerald-200/90">
+{{ stringify(log.message) }}
+                  </pre>
+                  <div v-if="supplementalKeys(log).length" class="mt-3 space-y-1 text-[11px] text-emerald-300/70">
+                    <div v-for="key in supplementalKeys(log)" :key="key">
+                      <span class="font-semibold text-emerald-200">{{ key }}:</span>
+                      <span class="ml-1 font-mono text-emerald-300/90">{{ stringify(log[key]) }}</span>
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </transition>
 
     <transition name="fade">
-      <button
-        v-if="!isOpen"
-        type="button"
-        class="pointer-events-auto flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950/95 px-3 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 shadow-lg shadow-slate-950/60 transition hover:border-slate-600 hover:text-white"
-        @click="isOpen = true"
-      >
-        <span>Flagship Logs</span>
-        <span class="ml-1 rounded-full bg-slate-800 px-2 py-[1px] text-[10px] font-bold text-slate-200">{{ logs.length }}</span>
-      </button>
+      <div v-if="!isOpen" class="pointer-events-auto flex justify-end px-6 pb-4">
+        <button
+          type="button"
+          class="flex items-center gap-2 rounded-full border border-emerald-500/40 bg-slate-950/90 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-300 shadow-[0_18px_40px_-32px_rgba(16,185,129,0.95)] transition hover:border-emerald-400 hover:text-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400"
+          @click="isOpen = true"
+        >
+          <span class="inline-flex h-2 w-2 animate-pulse rounded-full bg-emerald-400/90"></span>
+          <span>AB Tasty Logs</span>
+          <span class="rounded-full bg-emerald-500/15 px-2 py-[2px] text-[10px] font-bold text-emerald-200">{{ logs.length }}</span>
+        </button>
+      </div>
     </transition>
+
+    <div
+      v-if="isOpen && isResizing"
+      class="resize-ghost-outline pointer-events-none fixed inset-x-0 bottom-0 z-40"
+      :style="{ height: `${ghostHeight}px` }"
+    >
+    </div>
   </div>
 </template>
 
@@ -67,7 +147,68 @@
 import { flagshipLogStore, type FlagshipLogEntry } from '@/utils/flagship/logStore'
 
 const logs = ref<FlagshipLogEntry[]>([])
-const isOpen = useState('flagship-log-viewer-open', () => true)
+const isOpen = useState('flagship-log-viewer-open', () => false)
+const searchTerm = useState('flagship-log-search', () => '')
+const panelHeight = useState('flagship-log-panel-height', () => 320)
+const isResizing = ref(false)
+const ghostHeight = ref(panelHeight.value);
+
+const MIN_HEIGHT = 200
+const MAX_HEIGHT = 640
+let resizeStartY = 0
+let resizeStartHeight = panelHeight.value
+
+const clampHeight = (value: number) => Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, value))
+
+const updateHeight = (clientY: number) => {
+  const newHeight = clampHeight(resizeStartHeight + (resizeStartY - clientY))
+  panelHeight.value = newHeight
+  ghostHeight.value = newHeight
+}
+
+const handleMouseMove = (event: MouseEvent) => {
+  updateHeight(event.clientY)
+}
+
+const handleTouchMove = (event: TouchEvent) => {
+  if (event.touches.length === 0) return
+  event.preventDefault()
+  updateHeight(event.touches[0].clientY)
+}
+
+const stopResize = () => {
+  if (!isResizing.value || typeof window === 'undefined') return
+  isResizing.value = false
+  if (typeof document !== 'undefined') {
+    document.body.style.userSelect = ''
+  }
+  ghostHeight.value = panelHeight.value;
+  window.removeEventListener('mousemove', handleMouseMove)
+  window.removeEventListener('touchmove', handleTouchMove)
+  window.removeEventListener('mouseup', stopResize)
+  window.removeEventListener('touchend', stopResize)
+  window.removeEventListener('touchcancel', stopResize)
+}
+
+const startResize = (event: MouseEvent | TouchEvent) => {
+  if (typeof window === 'undefined') return
+  const clientY = 'touches' in event ? event.touches[0]?.clientY ?? 0 : event.clientY
+
+  resizeStartY = clientY
+  resizeStartHeight = panelHeight.value
+  isResizing.value = true
+  ghostHeight.value = panelHeight.value;
+
+  if (typeof document !== 'undefined') {
+    document.body.style.userSelect = 'none'
+  }
+
+  window.addEventListener('mousemove', handleMouseMove)
+  window.addEventListener('touchmove', handleTouchMove, { passive: false })
+  window.addEventListener('mouseup', stopResize)
+  window.addEventListener('touchend', stopResize)
+  window.removeEventListener('touchcancel', stopResize)
+}
 
 const stringify = (value: unknown) => {
   if (typeof value === 'string') return value
@@ -82,22 +223,78 @@ const stringify = (value: unknown) => {
 const supplementalKeys = (log: FlagshipLogEntry) =>
   Object.keys(log).filter((key) => !['timestamp', 'level', 'message', 'tag'].includes(key))
 
-const levelColor = (level: FlagshipLogEntry['level']) => {
+const filteredLogs = computed(() => {
+  const query = searchTerm.value.trim().toLowerCase()
+  if (!query) {
+    return logs.value
+  }
+
+  return logs.value.filter((entry) => {
+    const baseSegments = [
+      entry.timestamp,
+      entry.level,
+      entry.tag,
+      stringify(entry.message)
+    ]
+
+    const extraSegments = supplementalKeys(entry).map((key) => `${key}: ${stringify(entry[key])}`)
+
+    return [...baseSegments, ...extraSegments].some((segment) =>
+      stringify(segment).toLowerCase().includes(query)
+    )
+  })
+})
+
+const filteredCountLabel = computed(() => {
+  if (!searchTerm.value.trim()) {
+    return String(logs.value.length)
+  }
+
+  return `${filteredLogs.value.length}/${logs.value.length}`
+})
+
+const levelTone = (level: FlagshipLogEntry['level']) => {
   switch (level) {
     case 'ERROR':
     case 'CRITICAL':
     case 'EMERGENCY':
-      return 'text-rose-400'
+      return 'text-rose-300'
     case 'WARNING':
-      return 'text-amber-400'
+      return 'text-amber-300'
     case 'INFO':
     case 'NOTICE':
-      return 'text-emerald-400'
+      return 'text-emerald-300'
     case 'DEBUG':
     default:
-      return 'text-slate-400'
+      return 'text-slate-300'
   }
 }
+
+const formatTimestamp = (value: string) => {
+  const parsed = Number.isNaN(Date.parse(value)) ? value : new Date(value)
+
+  if (parsed instanceof Date) {
+    const formatted = parsed.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+    return `[${formatted}]`
+  }
+
+  if (typeof parsed === 'string' && !parsed.startsWith('[')) {
+    return `[${parsed}]`
+  }
+
+  return value
+}
+
+watch(isOpen, (open) => {
+  if (!open) {
+    stopResize()
+  }
+})
 
 onMounted(() => {
   const unsubscribe = flagshipLogStore.subscribe((entries) => {
@@ -106,11 +303,22 @@ onMounted(() => {
 
   onBeforeUnmount(() => {
     unsubscribe()
+    stopResize()
   })
 })
 </script>
 
 <style scoped>
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.2s ease;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -118,5 +326,24 @@ onMounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.resize-ghost-outline {
+  border-top: 3px dashed rgba(52, 211, 153, 0.8); /* Stronger emerald border */
+  border-left: 3px dashed rgba(52, 211, 153, 0.8);
+  border-right: 3px dashed rgba(52, 211, 153, 0.8);
+  background-color: rgba(16, 185, 129, 0.05); /* Slightly opaque fill */
+  box-shadow: 0 -10px 60px -10px rgba(16, 185, 129, 0.8); /* Stronger shadow */
+  pointer-events: none; /* Ensure it doesn't block interactions */
+}
+
+/* Custom slow pulse for the SVG icon */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 </style>

@@ -5,5 +5,8 @@
       <slot />
     </main>
     <SiteFooter />
+    <ClientOnly>
+      <FlagshipLogPanel />
+    </ClientOnly>
   </div>
 </template>
