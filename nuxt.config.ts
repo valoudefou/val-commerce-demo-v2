@@ -24,6 +24,10 @@ export default defineNuxtConfig({
   css: ['@/assets/css/tailwind.css'],
   modules: ['@nuxtjs/tailwindcss'],
   runtimeConfig: {
+    flagship: {
+      envId: '',
+      apiKey: ''
+    },
     public: {
       companyName: 'Commerce Demo',
       supportEmail: 'hello@valcommerce.demo'

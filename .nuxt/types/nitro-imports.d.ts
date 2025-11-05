@@ -42,6 +42,7 @@ declare global {
   const fetchProducts: typeof import('../../server/utils/products').fetchProducts
   const fetchWithEvent: typeof import('../../node_modules/h3').fetchWithEvent
   const findProductBySlug: typeof import('../../server/utils/products').findProductBySlug
+  const flagshipLogStore: typeof import('../../server/utils/flagship/logStore').flagshipLogStore
   const fromNodeMiddleware: typeof import('../../node_modules/h3').fromNodeMiddleware
   const fromPlainHandler: typeof import('../../node_modules/h3').fromPlainHandler
   const fromWebHandler: typeof import('../../node_modules/h3').fromWebHandler
@@ -72,6 +73,7 @@ declare global {
   const getValidatedRouterParams: typeof import('../../node_modules/h3').getValidatedRouterParams
   const handleCacheHeaders: typeof import('../../node_modules/h3').handleCacheHeaders
   const handleCors: typeof import('../../node_modules/h3').handleCors
+  const initializeFlagship: typeof import('../../server/utils/flagship/index').initializeFlagship
   const isCorsOriginAllowed: typeof import('../../node_modules/h3').isCorsOriginAllowed
   const isError: typeof import('../../node_modules/h3').isError
   const isEvent: typeof import('../../node_modules/h3').isEvent
@@ -127,6 +129,12 @@ declare global {
   const useStorage: typeof import('../../node_modules/nitropack/dist/runtime/internal/storage').useStorage
   const writeEarlyHints: typeof import('../../node_modules/h3').writeEarlyHints
 }
+// for type re-export
+declare global {
+  // @ts-ignore
+  export type { FlagshipLogLevel, FlagshipLogEntry } from '../../server/utils/flagship/logStore'
+  import('../../server/utils/flagship/logStore')
+}
 export { useNitroApp } from 'nitropack/runtime/internal/app';
 export { useRuntimeConfig, useAppConfig } from 'nitropack/runtime/internal/config';
 export { defineNitroPlugin, nitroPlugin } from 'nitropack/runtime/internal/plugin';
@@ -141,4 +149,6 @@ export { defineNitroErrorHandler } from 'nitropack/runtime/internal/error/utils'
 export { appendCorsHeaders, appendCorsPreflightHeaders, appendHeader, appendHeaders, appendResponseHeader, appendResponseHeaders, assertMethod, callNodeListener, clearResponseHeaders, clearSession, createApp, createAppEventHandler, createError, createEvent, createEventStream, createRouter, defaultContentType, defineEventHandler, defineLazyEventHandler, defineNodeListener, defineNodeMiddleware, defineRequestMiddleware, defineResponseMiddleware, defineWebSocket, defineWebSocketHandler, deleteCookie, dynamicEventHandler, eventHandler, fetchWithEvent, fromNodeMiddleware, fromPlainHandler, fromWebHandler, getCookie, getHeader, getHeaders, getMethod, getProxyRequestHeaders, getQuery, getRequestFingerprint, getRequestHeader, getRequestHeaders, getRequestHost, getRequestIP, getRequestPath, getRequestProtocol, getRequestURL, getRequestWebStream, getResponseHeader, getResponseHeaders, getResponseStatus, getResponseStatusText, getRouterParam, getRouterParams, getSession, getValidatedQuery, getValidatedRouterParams, handleCacheHeaders, handleCors, isCorsOriginAllowed, isError, isEvent, isEventHandler, isMethod, isPreflightRequest, isStream, isWebResponse, lazyEventHandler, parseCookies, promisifyNodeListener, proxyRequest, readBody, readFormData, readMultipartFormData, readRawBody, readValidatedBody, removeResponseHeader, sanitizeStatusCode, sanitizeStatusMessage, sealSession, send, sendError, sendIterable, sendNoContent, sendProxy, sendRedirect, sendStream, sendWebResponse, serveStatic, setCookie, setHeader, setHeaders, setResponseHeader, setResponseHeaders, setResponseStatus, splitCookiesString, toEventHandler, toNodeListener, toPlainHandler, toWebHandler, toWebRequest, unsealSession, updateSession, useBase, useSession, writeEarlyHints } from 'h3';
 export { buildAssetsURL as __buildAssetsURL, publicAssetsURL as __publicAssetsURL } from '/Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/@nuxt/nitro-server/dist/runtime/utils/paths';
 export { defineAppConfig } from '/Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/@nuxt/nitro-server/dist/runtime/utils/config';
+export { initializeFlagship } from '/Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/server/utils/flagship/index';
+export { flagshipLogStore } from '/Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/server/utils/flagship/logStore';
 export { fetchProducts, findProductBySlug } from '/Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/server/utils/products';

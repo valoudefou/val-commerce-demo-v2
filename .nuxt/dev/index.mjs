@@ -1,10 +1,11 @@
 import process from 'node:process';globalThis._importMeta_={url:import.meta.url,env:process.env};import { tmpdir } from 'node:os';
-import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, getRouterParams, getResponseStatusText } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/h3/dist/index.mjs';
+import { defineEventHandler, handleCacheHeaders, splitCookiesString, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, getRequestHeader, setResponseHeaders, setResponseStatus, send, getRequestHeaders, setResponseHeader, appendResponseHeader, getRequestURL, getResponseHeader, removeResponseHeader, createError, getQuery as getQuery$1, readBody, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, getRouterParam, getCookie, setCookie, getHeader, getRouterParams, getResponseStatusText } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/h3/dist/index.mjs';
 import { Server } from 'node:http';
 import { resolve, dirname, join } from 'node:path';
 import nodeCrypto from 'node:crypto';
 import { parentPort, threadId } from 'node:worker_threads';
 import { escapeHtml } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/@vue/shared/dist/shared.cjs.js';
+import { Flagship, LogLevel } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/@flagship.io/js-sdk/dist/index.node.esm.mjs';
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/vue-bundle-renderer/dist/runtime.mjs';
 import { parseURL, withoutBase, joinURL, getQuery, withQuery, withTrailingSlash, decodePath, withLeadingSlash, withoutTrailingSlash, joinRelativeURL } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/ufo/dist/index.mjs';
 import { renderToString } from 'file:///Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/node_modules/vue/server-renderer/index.mjs';
@@ -650,6 +651,10 @@ const _inlineRuntimeConfig = {
   "public": {
     "companyName": "Commerce Demo",
     "supportEmail": "hello@valcommerce.demo"
+  },
+  "flagship": {
+    "envId": "",
+    "apiKey": ""
   }
 };
 const envOptions = {
@@ -1861,12 +1866,14 @@ async function getIslandContext(event) {
   return ctx;
 }
 
+const _lazy_0By3q6 = () => Promise.resolve().then(function () { return applePay_get$1; });
 const _lazy_RPHsNg = () => Promise.resolve().then(function () { return _slug__get$1; });
 const _lazy_lPJa6u = () => Promise.resolve().then(function () { return index_get$1; });
 const _lazy_8i5jFq = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
   { route: '', handler: _aUbVTW, lazy: false, middleware: true, method: undefined },
+  { route: '/api/features/apple-pay', handler: _lazy_0By3q6, lazy: true, middleware: false, method: "get" },
   { route: '/api/products/:slug', handler: _lazy_RPHsNg, lazy: true, middleware: false, method: "get" },
   { route: '/api/products', handler: _lazy_lPJa6u, lazy: true, middleware: false, method: "get" },
   { route: '/__nuxt_error', handler: _lazy_8i5jFq, lazy: true, middleware: false, method: undefined },
@@ -2200,6 +2207,246 @@ const styles = {};
 const styles$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: styles
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const listeners = [];
+const logs = [];
+const MAX_LOGS = 200;
+const SENSITIVE_KEYS = ["_envId", "x-api-key", "_apiKey", "envId", "apiKey", "env_id", "api_key"];
+const simpleHash = (value) => {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value.charCodeAt(index);
+    hash = (hash << 5) - hash + char;
+    hash &= hash;
+  }
+  return Math.abs(hash).toString(16);
+};
+const hashSensitiveValue = (value) => {
+  if (typeof value !== "string" || value.length === 0) {
+    return value;
+  }
+  if (value.length <= 6) {
+    return `${value.charAt(0)}***${simpleHash(value.slice(1))}`;
+  }
+  return `${value.substring(0, 3)}***${simpleHash(value.slice(3))}`;
+};
+const processSensitiveStrings = (value) => {
+  let processed = value;
+  SENSITIVE_KEYS.forEach((key) => {
+    const patterns = [
+      new RegExp(`(${key}\\s*[=:]\\s*["']?)([^"'\\s,}&]+)(["']?)`, "gi"),
+      new RegExp(`("${key}"\\s*:\\s*["']?)([^"'\\s,}&]+)(["']?)`, "gi")
+    ];
+    patterns.forEach((pattern) => {
+      processed = processed.replace(pattern, (match, prefix, payload, suffix) => {
+        return `${prefix}${hashSensitiveValue(payload)}${suffix}`;
+      });
+    });
+  });
+  return processed;
+};
+const processSensitiveData = (input) => {
+  if (input === null) {
+    return input;
+  }
+  if (typeof input === "string") {
+    return processSensitiveStrings(input);
+  }
+  if (Array.isArray(input)) {
+    return input.map((item) => processSensitiveData(item));
+  }
+  if (typeof input === "object") {
+    const record = input;
+    const processed = {};
+    Object.entries(record).forEach(([key, value]) => {
+      const isSensitiveKey = SENSITIVE_KEYS.some((sensitiveKey) => sensitiveKey.toLowerCase() === key.toLowerCase());
+      if (isSensitiveKey) {
+        processed[key] = hashSensitiveValue(value);
+        return;
+      }
+      if (typeof value === "string") {
+        processed[key] = processSensitiveStrings(value);
+        return;
+      }
+      if (typeof value === "object") {
+        processed[key] = processSensitiveData(value);
+        return;
+      }
+      processed[key] = value;
+    });
+    return processed;
+  }
+  return input;
+};
+const notifyListeners = () => {
+  const snapshot = [...logs].reverse();
+  listeners.forEach((listener) => {
+    try {
+      listener(snapshot);
+    } catch (error) {
+      console.error("Flagship log listener error", error);
+    }
+  });
+};
+const flagshipLogStore = {
+  addLog(entry) {
+    console.log("Original log:", entry);
+    const processedLog = processSensitiveData(entry);
+    console.log("Processed log:", processedLog);
+    logs.push(processedLog);
+    if (logs.length > MAX_LOGS) {
+      logs.shift();
+    }
+    notifyListeners();
+  },
+  subscribe(callback) {
+    listeners.push(callback);
+    callback([...logs].reverse());
+    return () => {
+      const index = listeners.indexOf(callback);
+      if (index !== -1) {
+        listeners.splice(index, 1);
+      }
+    };
+  },
+  getLogs() {
+    return [...logs];
+  },
+  clear() {
+    logs.length = 0;
+  }
+};
+
+const resolveLevelName = (level) => {
+  const value = typeof level === "number" ? LogLevel[level] : level;
+  return value != null ? value : "INFO";
+};
+const customLog = {
+  emergency(message, tag) {
+    this.log(LogLevel.EMERGENCY, message, tag);
+  },
+  alert(message, tag) {
+    this.log(LogLevel.ALERT, message, tag);
+  },
+  critical(message, tag) {
+    this.log(LogLevel.CRITICAL, message, tag);
+  },
+  error(message, tag) {
+    this.log(LogLevel.ERROR, message, tag);
+  },
+  warning(message, tag) {
+    this.log(LogLevel.WARNING, message, tag);
+  },
+  notice(message, tag) {
+    this.log(LogLevel.NOTICE, message, tag);
+  },
+  info(message, tag) {
+    this.log(LogLevel.INFO, message, tag);
+  },
+  debug(message, tag) {
+    this.log(LogLevel.DEBUG, message, tag);
+  },
+  log(level, message, tag) {
+    const levelName = resolveLevelName(level);
+    const logEntry = {
+      timestamp: (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }),
+      level: levelName,
+      message,
+      tag
+    };
+    console.log(`[${logEntry.level}] [${tag != null ? tag : "flagship"}]: ${message}`);
+    flagshipLogStore.addLog(logEntry);
+  }
+};
+let flagshipStarted = false;
+const ensureFlagshipStarted = () => {
+  var _a;
+  if (flagshipStarted) return;
+  const config = useRuntimeConfig();
+  const flagshipConfig = (_a = config.flagship) != null ? _a : {};
+  const envId = flagshipConfig.envId;
+  const apiKey = flagshipConfig.apiKey;
+  if (!envId || !apiKey) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Flagship credentials are missing. Please configure runtimeConfig.flagship."
+    });
+  }
+  Flagship.start(envId, apiKey, {
+    fetchNow: false,
+    logManager: customLog,
+    logLevel: LogLevel.ALL
+  });
+  flagshipStarted = true;
+};
+const initializeFlagship = async ({
+  visitorId,
+  context = {},
+  authenticated = false
+}) => {
+  if (!visitorId) {
+    throw createError({ statusCode: 400, statusMessage: "A visitorId is required to initialize Flagship." });
+  }
+  ensureFlagshipStarted();
+  const visitor = Flagship.newVisitor({
+    visitorId,
+    hasConsented: true,
+    context,
+    isAuthenticated: authenticated
+  });
+  await visitor.fetchFlags();
+  return visitor;
+};
+
+const FLAGSHIP_VISITOR_COOKIE = "fsVisitorId";
+const APPLE_PAY_FLAG_KEY = "paymentFeature1Click";
+const generateVisitorId = () => `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+const applePay_get = defineEventHandler(async (event) => {
+  var _a;
+  let visitorId = getCookie(event, FLAGSHIP_VISITOR_COOKIE);
+  if (!visitorId) {
+    visitorId = generateVisitorId();
+    setCookie(event, FLAGSHIP_VISITOR_COOKIE, visitorId, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false
+    });
+  }
+  try {
+    const visitor = await initializeFlagship({
+      visitorId,
+      context: {
+        page: "product",
+        userAgent: (_a = getHeader(event, "user-agent")) != null ? _a : "unknown"
+      },
+      authenticated: false
+    });
+    const flag = visitor.getFlag(APPLE_PAY_FLAG_KEY);
+    const enabled = Boolean(flag.getValue(false));
+    console.log("Flagship feature evaluation", {
+      visitorId,
+      flagKey: APPLE_PAY_FLAG_KEY,
+      enabled,
+      flagsStatus: visitor.flagsStatus
+    });
+    return { enabled };
+  } catch (error) {
+    console.error("Failed to evaluate Apple Pay flag via Flagship", error);
+    return { enabled: false };
+  }
+});
+
+const applePay_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: applePay_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const PRODUCT_SOURCE_URL = "https://live-server1.vercel.app/products";
