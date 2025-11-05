@@ -101,6 +101,12 @@ declare module 'nuxt/schema' {
    companyName: string,
 
    supportEmail: string,
+
+   flagship: {
+      envId: string,
+
+      apiKey: string,
+   },
   }
 }
 declare module 'vue' {

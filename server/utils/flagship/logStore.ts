@@ -11,7 +11,7 @@ export type FlagshipLogLevel =
 export type FlagshipLogEntry = {
   timestamp: string
   level: FlagshipLogLevel
-  message: string
+  message: unknown
   tag?: string
   [key: string]: unknown
 }
@@ -124,10 +124,7 @@ const notifyListeners = () => {
 
 export const flagshipLogStore = {
   addLog(entry: FlagshipLogEntry) {
-    console.log('Original log:', entry)
-
     const processedLog = processSensitiveData(entry)
-    console.log('Processed log:', processedLog)
 
     logs.push(processedLog)
 

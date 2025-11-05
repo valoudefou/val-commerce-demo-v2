@@ -650,11 +650,15 @@ const _inlineRuntimeConfig = {
   },
   "public": {
     "companyName": "Commerce Demo",
-    "supportEmail": "hello@valcommerce.demo"
+    "supportEmail": "hello@valcommerce.demo",
+    "flagship": {
+      "envId": "bmabnbrggr14492eb9jg",
+      "apiKey": "g7WzBeejX15SYqCxKJ3oP6y335hiIYsL1jAUg7ge"
+    }
   },
   "flagship": {
-    "envId": "",
-    "apiKey": ""
+    "envId": "bmabnbrggr14492eb9jg",
+    "apiKey": "g7WzBeejX15SYqCxKJ3oP6y335hiIYsL1jAUg7ge"
   }
 };
 const envOptions = {
@@ -2291,9 +2295,7 @@ const notifyListeners = () => {
 };
 const flagshipLogStore = {
   addLog(entry) {
-    console.log("Original log:", entry);
     const processedLog = processSensitiveData(entry);
-    console.log("Processed log:", processedLog);
     logs.push(processedLog);
     if (logs.length > MAX_LOGS) {
       logs.shift();
@@ -2366,12 +2368,13 @@ const customLog = {
 };
 let flagshipStarted = false;
 const ensureFlagshipStarted = () => {
-  var _a;
+  var _a, _b, _c;
   if (flagshipStarted) return;
   const config = useRuntimeConfig();
   const flagshipConfig = (_a = config.flagship) != null ? _a : {};
-  const envId = flagshipConfig.envId;
-  const apiKey = flagshipConfig.apiKey;
+  const publicFlagship = (_c = (_b = config.public) == null ? void 0 : _b.flagship) != null ? _c : {};
+  const envId = flagshipConfig.envId || publicFlagship.envId;
+  const apiKey = flagshipConfig.apiKey || publicFlagship.apiKey;
   if (!envId || !apiKey) {
     throw createError({
       statusCode: 500,
@@ -2430,16 +2433,34 @@ const applePay_get = defineEventHandler(async (event) => {
       authenticated: false
     });
     const flag = visitor.getFlag(APPLE_PAY_FLAG_KEY);
-    const enabled = Boolean(flag.getValue(false));
+    const rawValue = flag.getValue("false");
+    const enabled = typeof rawValue === "string" ? rawValue.trim().toLowerCase() === "true" : Boolean(rawValue);
+    flagshipLogStore.addLog({
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      level: "INFO",
+      tag: "flagship-server",
+      message: `Flag ${APPLE_PAY_FLAG_KEY} evaluated during SSR`,
+      visitorId,
+      rawValue,
+      enabled
+    });
     console.log("Flagship feature evaluation", {
       visitorId,
       flagKey: APPLE_PAY_FLAG_KEY,
+      rawValue,
       enabled,
       flagsStatus: visitor.flagsStatus
     });
     return { enabled };
   } catch (error) {
     console.error("Failed to evaluate Apple Pay flag via Flagship", error);
+    flagshipLogStore.addLog({
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      level: "ERROR",
+      tag: "flagship-server",
+      message: `Failed to evaluate ${APPLE_PAY_FLAG_KEY}`,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return { enabled: false };
   }
 });

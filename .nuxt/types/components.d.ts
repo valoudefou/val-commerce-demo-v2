@@ -15,6 +15,7 @@ type LazyComponent<T> = DefineComponent<HydrationStrategies, {}, {}, {}, {}, {},
 
 interface _GlobalComponents {
   'FeatureGrid': typeof import("../../components/FeatureGrid.vue")['default']
+  'FlagshipLogPanel': typeof import("../../components/FlagshipLogPanel.vue")['default']
   'HeroSection': typeof import("../../components/HeroSection.vue")['default']
   'NavigationBar': typeof import("../../components/NavigationBar.vue")['default']
   'NewsletterBanner': typeof import("../../components/NewsletterBanner.vue")['default']
@@ -47,6 +48,7 @@ interface _GlobalComponents {
   'Body': typeof import("../../node_modules/nuxt/dist/head/runtime/components")['Body']
   'NuxtIsland': typeof import("../../node_modules/nuxt/dist/app/components/nuxt-island")['default']
   'LazyFeatureGrid': LazyComponent<typeof import("../../components/FeatureGrid.vue")['default']>
+  'LazyFlagshipLogPanel': LazyComponent<typeof import("../../components/FlagshipLogPanel.vue")['default']>
   'LazyHeroSection': LazyComponent<typeof import("../../components/HeroSection.vue")['default']>
   'LazyNavigationBar': LazyComponent<typeof import("../../components/NavigationBar.vue")['default']>
   'LazyNewsletterBanner': LazyComponent<typeof import("../../components/NewsletterBanner.vue")['default']>
