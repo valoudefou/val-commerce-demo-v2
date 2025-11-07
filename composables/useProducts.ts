@@ -1,15 +1,5 @@
 import type { Product } from '@/types/product'
-
-const shuffleProducts = (items: Product[]) => {
-  const array = [...items]
-
-  for (let index = array.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1))
-    ;[array[index], array[swapIndex]] = [array[swapIndex], array[index]]
-  }
-
-  return array
-}
+import { slugifyBrand } from '@/utils/brand'
 
 export const useProducts = () => {
   const products = useState<Product[]>('products', () => [])
@@ -36,9 +26,8 @@ export const useProducts = () => {
 
     try {
       const response = await $fetch<Product[]>('/api/products')
-      const randomized = shuffleProducts(response)
-      products.value = randomized
-      allProducts.value = randomized
+      products.value = response
+      allProducts.value = response
       selectedBrand.value = 'All'
       searchQuery.value = ''
       searchResults.value = []
@@ -92,12 +81,21 @@ export const useProducts = () => {
 
     loading.value = true
 
+    const brandSlug = slugifyBrand(brand)
+
+    if (!brandSlug) {
+      products.value = []
+      error.value = `No products found for brand "${brand}".`
+      loading.value = false
+      return
+    }
+
     try {
       const response = await $fetch<{ products: Product[] }>(
-        `/api/products/brand/${encodeURIComponent(brand)}`
+        `/api/products/brand/${encodeURIComponent(brandSlug)}`
       )
 
-      products.value = shuffleProducts(response.products)
+      products.value = response.products
     } catch (err) {
       const status = (err as { status?: number; statusCode?: number })?.statusCode
         ?? (err as { status?: number })?.status

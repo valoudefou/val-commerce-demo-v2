@@ -2504,6 +2504,8 @@ const applePay_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProp
   default: applePay_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
+const slugifyBrand = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
 const PRODUCT_SOURCE_URL = "https://live-server1.vercel.app/products";
 const CACHE_TTL = 1e3 * 60 * 5;
 let cachedProducts = null;
@@ -2607,16 +2609,29 @@ const fetchProductBrands = async () => {
   return Array.from(unique);
 };
 const findProductsByBrand = async (brand) => {
+  var _a;
   const normalizedBrand = sanitizeBrand(brand);
   if (!normalizedBrand) {
     return [];
   }
-  const products = await fetchProducts();
-  const target = normalizedBrand.toLowerCase();
-  return products.filter((product) => {
-    const productBrand = sanitizeBrand(product.brand);
-    return productBrand ? productBrand.toLowerCase() === target : false;
-  });
+  const brandSlug = slugifyBrand(normalizedBrand);
+  if (!brandSlug) {
+    return [];
+  }
+  try {
+    const { products } = await $fetch(`${PRODUCT_SOURCE_URL}/brand/${brandSlug}`);
+    return products.map(toProduct);
+  } catch (error) {
+    const status = (_a = error == null ? void 0 : error.statusCode) != null ? _a : error == null ? void 0 : error.status;
+    if (status === 404) {
+      return [];
+    }
+    console.error(`Failed to load products for brand slug "${brandSlug}"`, error);
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Unable to load product catalog right now."
+    });
+  }
 };
 
 const _slug__get = defineEventHandler(async (event) => {

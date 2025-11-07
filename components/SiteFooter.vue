@@ -6,7 +6,7 @@
           <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600">
             <ShoppingBagIcon class="h-6 w-6" />
           </span>
-          Val Commerce
+          Commerce Demo
         </NuxtLink>
         <p class="mt-4 text-sm leading-6 text-slate-600">
           We design considered essentials for modern explorers. Built to move effortlessly between city streets and remote escapes.
@@ -24,7 +24,7 @@
         <div>
           <h3 class="font-semibold uppercase tracking-wide text-slate-900">Support</h3>
           <ul class="mt-4 space-y-3">
-            <li><a href="mailto:hello@valcommerce.demo" class="hover:text-primary-600">Contact</a></li>
+            <li><a href="mailto:hello@commerce.demo" class="hover:text-primary-600">Contact</a></li>
             <li><a href="#" class="hover:text-primary-600">Shipping & Returns</a></li>
             <li><a href="#" class="hover:text-primary-600">FAQ</a></li>
           </ul>

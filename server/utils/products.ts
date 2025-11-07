@@ -1,4 +1,5 @@
 import type { Product } from '@/types/product'
+import { slugifyBrand } from '@/utils/brand'
 
 type RemoteProduct = {
   id: string | number
@@ -163,11 +164,28 @@ export const findProductsByBrand = async (brand: string): Promise<Product[]> => 
     return []
   }
 
-  const products = await fetchProducts()
-  const target = normalizedBrand.toLowerCase()
+  const brandSlug = slugifyBrand(normalizedBrand)
 
-  return products.filter((product) => {
-    const productBrand = sanitizeBrand(product.brand)
-    return productBrand ? productBrand.toLowerCase() === target : false
-  })
+  if (!brandSlug) {
+    return []
+  }
+
+  try {
+    const { products } = await $fetch<RemoteResponse>(`${PRODUCT_SOURCE_URL}/brand/${brandSlug}`)
+    return products.map(toProduct)
+  } catch (error) {
+    const status =
+      (error as { statusCode?: number; status?: number })?.statusCode
+      ?? (error as { status?: number })?.status
+
+    if (status === 404) {
+      return []
+    }
+
+    console.error(`Failed to load products for brand slug "${brandSlug}"`, error)
+    throw createError({
+      statusCode: 502,
+      statusMessage: 'Unable to load product catalog right now.'
+    })
+  }
 }
