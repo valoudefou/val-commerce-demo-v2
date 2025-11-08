@@ -1,5 +1,6 @@
 <template>
   <section id="products" class="mt-20 space-y-8">
+    <RecommendationsCarousel />
     <div class="flex flex-row flex-wrap items-start justify-between gap-6 sm:items-center">
       <div>
         <h2 class="section-title">Featured products</h2>
@@ -68,6 +69,7 @@
 
 <script setup lang="ts">
 import ProductCard from '@/components/ProductCard.vue'
+import RecommendationsCarousel from '@/components/RecommendationsCarousel.vue'
 import type { Product } from '@/types/product'
 
 defineProps<{

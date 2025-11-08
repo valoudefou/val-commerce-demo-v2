@@ -41,6 +41,7 @@ declare global {
   const eventHandler: typeof import('../../node_modules/h3').eventHandler
   const fetchProductBrands: typeof import('../../server/utils/products').fetchProductBrands
   const fetchProducts: typeof import('../../server/utils/products').fetchProducts
+  const fetchRecommendations: typeof import('../../server/utils/recommendations').fetchRecommendations
   const fetchWithEvent: typeof import('../../node_modules/h3').fetchWithEvent
   const findProductBySlug: typeof import('../../server/utils/products').findProductBySlug
   const findProductsByBrand: typeof import('../../server/utils/products').findProductsByBrand
@@ -136,6 +137,9 @@ declare global {
   // @ts-ignore
   export type { FlagshipLogLevel, FlagshipLogEntry } from '../../server/utils/flagship/logStore'
   import('../../server/utils/flagship/logStore')
+  // @ts-ignore
+  export type { RecommendationProduct, RecommendationResponse } from '../../server/utils/recommendations'
+  import('../../server/utils/recommendations')
 }
 export { useNitroApp } from 'nitropack/runtime/internal/app';
 export { useRuntimeConfig, useAppConfig } from 'nitropack/runtime/internal/config';
@@ -154,3 +158,4 @@ export { defineAppConfig } from '/Users/valerian.karsenty/Documents/App/val-comm
 export { initializeFlagship } from '/Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/server/utils/flagship/index';
 export { flagshipLogStore } from '/Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/server/utils/flagship/logStore';
 export { fetchProducts, findProductBySlug, fetchProductBrands, findProductsByBrand } from '/Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/server/utils/products';
+export { fetchRecommendations } from '/Users/valerian.karsenty/Documents/App/val-commerce-demo-v2/server/utils/recommendations';

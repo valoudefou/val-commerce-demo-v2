@@ -93,6 +93,14 @@ declare module 'nuxt/schema' {
       apiKey: string,
    },
 
+   recommendations: {
+      apiKey: string,
+
+      endpoint: string,
+
+      siteUrl: string,
+   },
+
    nitro: {
       envPrefix: string,
    },
@@ -107,6 +115,8 @@ declare module 'nuxt/schema' {
 
       apiKey: string,
    },
+
+   siteUrl: string,
   }
 }
 declare module 'vue' {

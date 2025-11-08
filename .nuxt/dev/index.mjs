@@ -654,11 +654,17 @@ const _inlineRuntimeConfig = {
     "flagship": {
       "envId": "bmabnbrggr14492eb9jg",
       "apiKey": "g7WzBeejX15SYqCxKJ3oP6y335hiIYsL1jAUg7ge"
-    }
+    },
+    "siteUrl": "https://val-commerce-demo.vercel.app"
   },
   "flagship": {
     "envId": "bmabnbrggr14492eb9jg",
     "apiKey": "g7WzBeejX15SYqCxKJ3oP6y335hiIYsL1jAUg7ge"
+  },
+  "recommendations": {
+    "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzaXRlX2lkIjoxMDMxLCJpYXQiOjE3NDYyMDIyNjAsImp0aSI6ImxELWlKVmtaVnZlOVVkYk5tVzZfcXJXN3ExaUpQM3pPRzZYNjRJcGRWNTgifQ.7IfQu2cuGktA82hElpDvJXbwnOnwGqqh-BLdmzBGPb8",
+    "endpoint": "https://uc-info.eu.abtasty.com/v1/reco/1031/recos/8d1ea373-571f-4d08-a9bf-04dda16383c2?fields=%5B%22price%22%2C%22name%22%2C%22img_link%22%2C%22absolute_link%22%5D",
+    "siteUrl": "https://val-commerce-demo.vercel.app"
   }
 };
 const envOptions = {
@@ -1876,6 +1882,7 @@ const _lazy_2FLXRz = () => Promise.resolve().then(function () { return _brand__g
 const _lazy_nJ6mvh = () => Promise.resolve().then(function () { return brands_get$1; });
 const _lazy_lPJa6u = () => Promise.resolve().then(function () { return index_get$1; });
 const _lazy_Ucle06 = () => Promise.resolve().then(function () { return search_get$1; });
+const _lazy_le8oSY = () => Promise.resolve().then(function () { return recommendations_get$1; });
 const _lazy_8i5jFq = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
@@ -1886,6 +1893,7 @@ const handlers = [
   { route: '/api/products/brands', handler: _lazy_nJ6mvh, lazy: true, middleware: false, method: "get" },
   { route: '/api/products', handler: _lazy_lPJa6u, lazy: true, middleware: false, method: "get" },
   { route: '/api/products/search', handler: _lazy_Ucle06, lazy: true, middleware: false, method: "get" },
+  { route: '/api/recommendations', handler: _lazy_le8oSY, lazy: true, middleware: false, method: "get" },
   { route: '/__nuxt_error', handler: _lazy_8i5jFq, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: _SxA8c9, lazy: false, middleware: false, method: undefined },
   { route: '/**', handler: _lazy_8i5jFq, lazy: true, middleware: false, method: undefined }
@@ -2517,7 +2525,7 @@ const parseNumber = (value) => {
   const numeric = typeof value === "string" ? Number.parseFloat(value) : value;
   return Number.isFinite(numeric) ? Number(numeric) : 0;
 };
-const slugify = (value, fallback) => {
+const slugify$1 = (value, fallback) => {
   const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return normalized.length > 0 ? normalized : fallback;
 };
@@ -2544,7 +2552,7 @@ const toProduct = (raw) => {
   if (brand) tagSet.add(brand);
   if (raw.tag) tagSet.add(raw.tag);
   const tags = Array.from(tagSet);
-  const slugBase = slugify((_d = raw.title) != null ? _d : `product-${id}`, `product-${id}`);
+  const slugBase = slugify$1((_d = raw.title) != null ? _d : `product-${id}`, `product-${id}`);
   const slug = `${slugBase}-${id}`;
   return {
     id,
@@ -2722,6 +2730,136 @@ const search_get = defineEventHandler(async (event) => {
 const search_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: search_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const PLACEHOLDER_IMAGE = "https://assets-manager.abtasty.com/placeholder.png";
+const slugify = (value, fallback) => {
+  const normalized = value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return normalized.length > 0 ? normalized : fallback;
+};
+const normalizePrice = (value) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return 0;
+};
+const ensureAbsoluteLink = (link, siteUrl) => {
+  if (!link) return void 0;
+  const trimmed = link.trim();
+  if (!trimmed) return void 0;
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/")) {
+    const base = siteUrl == null ? void 0 : siteUrl.replace(/\/+$/, "");
+    return base ? `${base}${trimmed}` : void 0;
+  }
+  return void 0;
+};
+const normalizeItem = (item, index, catalog, fallbackIdSeed, siteUrl) => {
+  var _a, _b, _c, _d, _e, _f, _g;
+  const name = ((_a = item.name) == null ? void 0 : _a.trim()) || `Recommended product ${index + 1}`;
+  const normalizedName = name.toLowerCase();
+  const absoluteLink = ensureAbsoluteLink(item.absolute_link, siteUrl);
+  const matchingProduct = (_b = catalog.find((product) => product.name.toLowerCase() === normalizedName)) != null ? _b : null;
+  if (matchingProduct) {
+    const remotePrice = normalizePrice(item.price);
+    const productForCarousel = remotePrice > 0 && remotePrice !== matchingProduct.price ? { ...matchingProduct, price: remotePrice } : matchingProduct;
+    return {
+      id: String((_c = item.id) != null ? _c : matchingProduct.slug),
+      product: productForCarousel,
+      detailUrl: `/products/${matchingProduct.slug}`,
+      externalUrl: absoluteLink
+    };
+  }
+  const slug = slugify(name, `recommended-${index + 1}`);
+  const fallbackId = fallbackIdSeed();
+  const fallbackProduct = {
+    id: fallbackId,
+    slug: `${slug}-${fallbackId}`,
+    name,
+    description: ((_d = item.description) == null ? void 0 : _d.trim()) || "Hand-picked for you by Val Commerce.",
+    price: normalizePrice(item.price),
+    category: "Recommendations",
+    image: ((_e = item.img_link) == null ? void 0 : _e.trim()) || PLACEHOLDER_IMAGE,
+    rating: 4.8,
+    highlights: ["Exclusive pick curated for you"],
+    inStock: true,
+    colors: [],
+    sizes: ["One Size"],
+    brand: ((_f = item.brand) == null ? void 0 : _f.trim()) || void 0,
+    stock: void 0,
+    discountPercentage: void 0,
+    availabilityStatus: "In stock",
+    returnPolicy: void 0,
+    link: absoluteLink
+  };
+  return {
+    id: String((_g = item.id) != null ? _g : fallbackProduct.slug),
+    product: fallbackProduct,
+    externalUrl: absoluteLink
+  };
+};
+const fetchRecommendations = async () => {
+  var _a, _b, _c, _d;
+  const config = useRuntimeConfig();
+  const apiKey = (_a = config.recommendations) == null ? void 0 : _a.apiKey;
+  const endpoint = (_b = config.recommendations) == null ? void 0 : _b.endpoint;
+  const siteUrl = (_c = config.recommendations) == null ? void 0 : _c.siteUrl;
+  if (!apiKey || !endpoint) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Recommendation credentials are missing. Please configure runtimeConfig.recommendations."
+    });
+  }
+  try {
+    const response = await $fetch(endpoint, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: "application/json"
+      }
+    });
+    if (!(response == null ? void 0 : response.items) || !Array.isArray(response.items)) {
+      throw createError({
+        statusCode: 502,
+        statusMessage: "Recommendations payload is invalid."
+      });
+    }
+    const catalog = await fetchProducts();
+    let fallbackSeed = 9e5;
+    const fallbackIdSeed = () => fallbackSeed++;
+    const normalizedItems = response.items.map((item, index) => normalizeItem(item, index, catalog, fallbackIdSeed, siteUrl)).filter(
+      (item, index, self) => self.findIndex((candidate) => candidate.id === item.id) === index
+    );
+    return {
+      title: ((_d = response.name) == null ? void 0 : _d.trim()) || "Recommended for you",
+      items: normalizedItems
+    };
+  } catch (error) {
+    if (error instanceof Error && "statusCode" in error) {
+      throw error;
+    }
+    console.error("Failed to load recommendations", error);
+    throw createError({
+      statusCode: 502,
+      statusMessage: "Unable to load recommendations right now."
+    });
+  }
+};
+
+const recommendations_get = defineEventHandler(async () => {
+  return await fetchRecommendations();
+});
+
+const recommendations_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: recommendations_get
 }, Symbol.toStringTag, { value: 'Module' }));
 
 function renderPayloadResponse(ssrContext) {

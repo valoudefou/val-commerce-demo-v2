@@ -21,6 +21,7 @@ interface _GlobalComponents {
   'NewsletterBanner': typeof import("../../components/NewsletterBanner.vue")['default']
   'ProductCard': typeof import("../../components/ProductCard.vue")['default']
   'ProductGrid': typeof import("../../components/ProductGrid.vue")['default']
+  'RecommendationsCarousel': typeof import("../../components/RecommendationsCarousel.vue")['default']
   'SiteFooter': typeof import("../../components/SiteFooter.vue")['default']
   'StoryHighlights': typeof import("../../components/StoryHighlights.vue")['default']
   'UINotifications': typeof import("../../components/UINotifications.vue")['default']
@@ -54,6 +55,7 @@ interface _GlobalComponents {
   'LazyNewsletterBanner': LazyComponent<typeof import("../../components/NewsletterBanner.vue")['default']>
   'LazyProductCard': LazyComponent<typeof import("../../components/ProductCard.vue")['default']>
   'LazyProductGrid': LazyComponent<typeof import("../../components/ProductGrid.vue")['default']>
+  'LazyRecommendationsCarousel': LazyComponent<typeof import("../../components/RecommendationsCarousel.vue")['default']>
   'LazySiteFooter': LazyComponent<typeof import("../../components/SiteFooter.vue")['default']>
   'LazyStoryHighlights': LazyComponent<typeof import("../../components/StoryHighlights.vue")['default']>
   'LazyUINotifications': LazyComponent<typeof import("../../components/UINotifications.vue")['default']>
