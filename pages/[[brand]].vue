@@ -92,10 +92,6 @@ const applyBrandFromRoute = async (slug?: string) => {
 
 await Promise.all([fetchBrands(), fetchProducts()])
 await applyBrandFromRoute(routeBrandSlug.value)
-if (import.meta.client && routeBrandSlug.value) {
-  await nextTick()
-  scrollToProducts('auto')
-}
 
 watch(
   () => routeBrandSlug.value,
