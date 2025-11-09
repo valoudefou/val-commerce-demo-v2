@@ -16,9 +16,9 @@
         <div>
           <h3 class="font-semibold uppercase tracking-wide text-slate-900">Shop</h3>
           <ul class="mt-4 space-y-3">
-            <li><NuxtLink to="#products" class="hover:text-primary-600">New arrivals</NuxtLink></li>
-            <li><a href="#stories" class="hover:text-primary-600">Stories</a></li>
-            <li><a href="#about" class="hover:text-primary-600">Sustainability</a></li>
+            <li><NuxtLink to="/products" class="hover:text-primary-600">New arrivals</NuxtLink></li>
+            <li><NuxtLink to="/journal" class="hover:text-primary-600">Stories</NuxtLink></li>
+            <li><NuxtLink to="/about" class="hover:text-primary-600">Sustainability</NuxtLink></li>
           </ul>
         </div>
         <div>

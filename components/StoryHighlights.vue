@@ -11,7 +11,7 @@
             <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary-500">{{ story.category }}</p>
             <h3 class="text-xl font-semibold text-slate-900">{{ story.title }}</h3>
             <p class="text-sm leading-6 text-slate-600">{{ story.excerpt }}</p>
-            <NuxtLink to="#" class="inline-flex items-center text-sm font-semibold text-primary-600">
+            <NuxtLink to="/journal" class="inline-flex items-center text-sm font-semibold text-primary-600">
               Read story
               <ArrowRightIcon class="ml-2 h-4 w-4" />
             </NuxtLink>
