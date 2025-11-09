@@ -10,6 +10,7 @@ export const useProducts = () => {
   const searchResults = useState<Product[]>('product-search-results', () => [])
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const hasFetchedProducts = useState<boolean>('has-fetched-products', () => false)
 
   const filterByBrand = (collection: Product[], brand: string) => {
     if (brand === 'All') {
@@ -21,6 +22,10 @@ export const useProducts = () => {
   }
 
   const fetchProducts = async () => {
+    if (hasFetchedProducts.value) {
+      return
+    }
+
     loading.value = true
     error.value = null
 
@@ -31,6 +36,7 @@ export const useProducts = () => {
       selectedBrand.value = 'All'
       searchQuery.value = ''
       searchResults.value = []
+      hasFetchedProducts.value = true
     } catch (err) {
       error.value = 'We were unable to load products. Please try again later.'
       console.error(err)
