@@ -101,8 +101,14 @@ export const useProducts = () => {
         ?? (err as { status?: number })?.status
 
       if (status === 404) {
-        products.value = []
-        error.value = `No products found for brand "${brand}".`
+        const fallback = filterByBrand(allProducts.value, brand)
+        products.value = fallback
+
+        if (fallback.length === 0) {
+          error.value = `No products found for brand "${brand}".`
+        } else {
+          error.value = null
+        }
       } else {
         error.value = 'We were unable to load products. Please try again later.'
       }
