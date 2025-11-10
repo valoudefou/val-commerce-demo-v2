@@ -15,9 +15,14 @@
           {{ formatCurrency(product.price) }}
         </p>
       </div>
-      <p class="mt-3 text-sm leading-6 text-slate-600">
-        {{ product.description }}
-      </p>
+      <NuxtLink
+        :to="`/products/${product.slug}`"
+        class="mt-3 block text-sm leading-6 text-slate-600"
+      >
+        <span class="line-clamp-3">
+          {{ product.description }}
+        </span>
+      </NuxtLink>
       <div class="mt-4 flex items-center gap-2 text-xs font-medium text-amber-500">
         <StarIcon v-for="index in 5" :key="index" :class="index <= Math.round(product.rating) ? 'fill-amber-400' : 'fill-slate-200'" class="h-4 w-4" />
         <span class="text-slate-500">({{ product.rating.toFixed(1) }})</span>
@@ -38,7 +43,8 @@
           @click="addToCart"
         >
           <ShoppingCartIcon class="mr-2 h-5 w-5" />
-          {{ product.inStock ? 'Add to cart' : 'Notify me' }}
+          <span class="hidden sm:inline">{{ product.inStock ? 'Add to cart' : 'Notify me' }}</span>
+          <span class="sr-only sm:hidden">{{ product.inStock ? 'Add to cart' : 'Notify me' }}</span>
         </button>
         <NuxtLink
           :to="`/products/${product.slug}`"

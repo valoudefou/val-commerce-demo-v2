@@ -13,3 +13,10 @@ body {
 .section-subtitle {
   @apply mt-2 max-w-2xl text-lg text-slate-600;
 }
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

@@ -31,27 +31,40 @@ export type RecommendationResponse = {
 const PLACEHOLDER_IMAGE = 'https://assets-manager.abtasty.com/placeholder.png'
 
 type RecommendationFilter = {
-  field: 'brand' | 'category' | 'cart_products'
+  field: 'brand' | 'homepage' | 'category' | 'cart_products' | 'viewed_items'
   value?: string | number[]
   categoriesInCart?: string[]
   addedToCartProductId?: number | null
+  viewingItemId?: number | null
+}
+
+type StrategyNameMap = Record<RecommendationFilter['field'], string>
+
+const resolveStrategyTitle = (
+  field: RecommendationFilter['field'] | undefined,
+  names?: Partial<StrategyNameMap>
+) => {
+  const fallback = names?.brand || 'Recommended for you'
+  if (!field) {
+    return fallback
+  }
+
+  return names?.[field] || fallback
 }
 
 const buildRecommendationUrl = (baseEndpoint: string, filter?: RecommendationFilter) => {
   try {
     const url = new URL(baseEndpoint)
-    const variables: Record<string, string | number[] | string[] | undefined> = {}
-    if (filter?.field === 'cart_products') {
+    const variables: Record<string, string | number | number[] | string[] | undefined> = {}
+    if (filter?.field === 'cart_products' || filter?.field === 'viewed_items') {
       const ids = Array.isArray(filter.value) ? filter.value : []
       if (ids.length > 0) {
-        variables.cart_products = ids
+        const key = filter.field === 'cart_products' ? 'cart_products' : 'user_viewed_items'
+        const formattedIds = ids.map((id) => String(id))
+        variables[key] = formattedIds
       }
-      const categories = filter.categoriesInCart?.map((category) => category.trim()).filter(Boolean) ?? []
-      if (categories.length > 0) {
-        variables['added_to_cart_product.category_id'] = categories
-      }
-      if (typeof filter.addedToCartProductId === 'number') {
-        variables.added_to_cart_product = [filter.addedToCartProductId]
+      if (filter.field === 'viewed_items' && typeof filter.viewingItemId === 'number') {
+        variables.viewing_item = String(filter.viewingItemId)
       }
     } else {
       const rawValue = typeof filter?.value === 'string' ? filter.value : ''
@@ -183,13 +196,22 @@ export const fetchRecommendations = async (
   const endpoint = config.recommendations?.endpoint
   const categoryEndpoint = config.recommendations?.categoryEndpoint
   const cartEndpoint = config.recommendations?.cartEndpoint
+  const viewedItemsEndpoint = config.recommendations?.viewedItemsEndpoint
+  const homepageEndpoint = config.recommendations?.homepageEndpoint
   const siteUrl = config.recommendations?.siteUrl
+  const strategyNames = config.recommendations?.strategyNames as
+    | Partial<StrategyNameMap>
+    | undefined
 
   let baseEndpoint = endpoint
   if (filter?.field === 'category') {
     baseEndpoint = categoryEndpoint || endpoint
   } else if (filter?.field === 'cart_products') {
     baseEndpoint = cartEndpoint || endpoint
+  } else if (filter?.field === 'viewed_items') {
+    baseEndpoint = viewedItemsEndpoint || endpoint
+  } else if (filter?.field === 'homepage') {
+    baseEndpoint = homepageEndpoint || endpoint
   }
 
   if (!apiKey || !baseEndpoint) {
@@ -208,8 +230,7 @@ export const fetchRecommendations = async (
     console.log('[Recommendations] Fetching AB Tasty feed', {
       endpoint: requestUrl,
       field: activeFilter?.field ?? filter?.field ?? 'brand',
-      value: activeFilter?.value ?? filter?.value,
-      categories: activeFilter?.categoriesInCart ?? filter?.categoriesInCart
+      value: activeFilter?.value ?? filter?.value
     })
 
     const response = await $fetch<{ name?: string; items?: RawRecommendation[] }>(requestUrl, {
@@ -237,7 +258,7 @@ export const fetchRecommendations = async (
       )
 
     return {
-      title: response.name?.trim() || 'Recommended for you',
+      title: response.name?.trim() || resolveStrategyTitle(filter?.field, strategyNames),
       items: normalizedItems
     }
   }
@@ -247,36 +268,36 @@ export const fetchRecommendations = async (
   } catch (error) {
     const statusCode = (error as { statusCode?: number })?.statusCode
 
-    const shouldRetryWithoutCartContext =
-      filter?.field === 'cart_products'
-      && statusCode
-      && statusCode >= 400
-      && ((filter.categoriesInCart?.length ?? 0) > 0 || typeof filter.addedToCartProductId === 'number')
+  const shouldRetryWithoutCartContext =
+    filter?.field === 'cart_products'
+    && statusCode
+    && statusCode >= 400
+    && ((filter.categoriesInCart?.length ?? 0) > 0 || typeof filter.addedToCartProductId === 'number')
 
-    if (shouldRetryWithoutCartContext) {
-      console.warn('Cart recommendation request failed, retrying without cart context')
+  if (shouldRetryWithoutCartContext) {
+    console.warn('Cart recommendation request failed, retrying without cart context')
 
-      return await performFetch({
-        ...filter,
-        categoriesInCart: undefined,
-        addedToCartProductId: undefined
-      })
-    }
+    return await performFetch({
+      ...filter,
+      categoriesInCart: undefined,
+      addedToCartProductId: undefined
+    })
+  }
 
-    if (statusCode) {
-      if (filter?.field === 'cart_products') {
-        console.error('Cart recommendations unavailable, returning empty set', error)
-        return {
-          title: 'Recommended for you',
-          items: []
-        }
+  if (statusCode) {
+    if (filter?.field === 'cart_products' || filter?.field === 'viewed_items') {
+      console.error('Recommendations unavailable for contextual strategy, returning empty set', error)
+      return {
+        title: resolveStrategyTitle(filter?.field, strategyNames),
+        items: []
       }
-      throw error
     }
+    throw error
+  }
 
     console.error('Failed to load recommendations, returning empty set', error)
     return {
-      title: 'Recommended for you',
+      title: resolveStrategyTitle(filter?.field, strategyNames),
       items: []
     }
   }
@@ -286,17 +307,22 @@ const normalizeFilterFromSource = (
   sourceField: unknown,
   sourceValue: unknown,
   categories?: unknown,
-  addedToCartProduct?: unknown
+  addedToCartProduct?: unknown,
+  viewingItem?: unknown
 ): RecommendationFilter => {
   let field: RecommendationFilter['field'] = 'brand'
   if (sourceField === 'category') {
     field = 'category'
   } else if (sourceField === 'cart_products') {
     field = 'cart_products'
+  } else if (sourceField === 'viewed_items') {
+    field = 'viewed_items'
+  } else if (sourceField === 'homepage') {
+    field = 'homepage'
   }
 
   let value: RecommendationFilter['value']
-  if (field === 'cart_products') {
+  if (field === 'cart_products' || field === 'viewed_items') {
     if (Array.isArray(sourceValue)) {
       value = sourceValue.filter((id) => Number.isFinite(Number(id))).map((id) => Number(id))
     } else if (typeof sourceValue === 'string') {
@@ -328,7 +354,15 @@ const normalizeFilterFromSource = (
     }
   }
 
-  return { field, value, categoriesInCart, addedToCartProductId }
+  let viewingItemId: number | undefined
+  if (field === 'viewed_items' && viewingItem !== undefined) {
+    const parsed = Number(viewingItem)
+    if (Number.isFinite(parsed)) {
+      viewingItemId = parsed
+    }
+  }
+
+  return { field, value, categoriesInCart, addedToCartProductId, viewingItemId }
 }
 
 export const handleRecommendationsRequest = async (event: H3Event, method: 'GET' | 'POST') => {
@@ -339,7 +373,8 @@ export const handleRecommendationsRequest = async (event: H3Event, method: 'GET'
         query.filterField,
         query.filterValue,
         query.categoriesInCart,
-        query.addedToCartProductId
+        query.addedToCartProductId,
+        query.viewingItemId
       )
     )
   }
@@ -349,6 +384,7 @@ export const handleRecommendationsRequest = async (event: H3Event, method: 'GET'
     filterValue?: string | number[] | number | null
     categoriesInCart?: string[] | string | null
     addedToCartProductId?: number | string | null
+    viewingItemId?: number | string | null
   }>(event)
 
   return await fetchRecommendations(
@@ -356,7 +392,8 @@ export const handleRecommendationsRequest = async (event: H3Event, method: 'GET'
       body?.filterField,
       body?.filterValue,
       body?.categoriesInCart ?? undefined,
-      body?.addedToCartProductId ?? undefined
+      body?.addedToCartProductId ?? undefined,
+      body?.viewingItemId ?? undefined
     )
   )
 }

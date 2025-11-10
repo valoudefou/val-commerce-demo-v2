@@ -102,7 +102,23 @@ declare module 'nuxt/schema' {
 
       cartEndpoint: string,
 
+      viewedItemsEndpoint: string,
+
+      homepageEndpoint: string,
+
       siteUrl: string,
+
+      strategyNames: {
+         brand: string,
+
+         homepage: string,
+
+         category: string,
+
+         cart_products: string,
+
+         viewed_items: string,
+      },
    },
 
    nitro: {
@@ -121,6 +137,20 @@ declare module 'nuxt/schema' {
    },
 
    siteUrl: string,
+
+   recommendations: {
+      strategyNames: {
+         brand: string,
+
+         homepage: string,
+
+         category: string,
+
+         cart_products: string,
+
+         viewed_items: string,
+      },
+   },
   }
 }
 declare module 'vue' {

@@ -8,6 +8,7 @@
       :brands="brands"
       :selected-brand="selectedBrand"
       :search-query="searchQuery"
+      recommendation-filter-field="homepage"
       @select-brand="onSelectBrand"
       @search="onSearch"
     />

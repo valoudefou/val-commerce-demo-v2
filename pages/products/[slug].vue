@@ -1,6 +1,7 @@
 <template>
-  <div class="grid gap-16 lg:grid-cols-[1.2fr,1fr]">
-    <div>
+  <div class="space-y-16">
+    <div class="grid gap-16 lg:grid-cols-[1.2fr,1fr]">
+      <div>
       <div class="overflow-hidden rounded-3xl bg-white shadow-xl">
         <img :src="product.image" :alt="product.name" class="h-[32rem] w-full object-cover" />
       </div>
@@ -27,8 +28,8 @@
           </div>
         </div>
       </section>
-    </div>
-    <aside class="space-y-8">
+      </div>
+      <aside class="space-y-8">
       <div class="sticky top-24 rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
         <NuxtLink to="/" class="inline-flex items-center text-sm font-semibold text-primary-600">
           <ArrowLeftIcon class="mr-2 h-4 w-4" />
@@ -104,12 +105,28 @@
         </ul>
       </div>
     </aside>
+    </div>
+
+    <ClientOnly>
+      <section v-if="viewedProductIds.length" class="lg:col-span-2">
+        <h2 class="text-xl font-semibold text-slate-900">Because you viewed these</h2>
+        <p class="mt-2 text-sm text-slate-600">Hand-picked picks inspired by your browsing.</p>
+        <div class="mt-8">
+          <RecommendationsCarousel
+            filter-field="viewed_items"
+            :filter-value="viewedProductIds"
+            :viewing-item-id="product.id"
+          />
+        </div>
+      </section>
+    </ClientOnly>
   </div>
 </template>
 
 <script setup lang="ts">
 import { EventCategory, HitType, type Visitor } from '@flagship.io/js-sdk'
 import { ArrowLeftIcon, CheckCircleIcon, ShoppingCartIcon } from '@heroicons/vue/24/solid'
+import RecommendationsCarousel from '@/components/RecommendationsCarousel.vue'
 // Client-side Flagship helper mirrors the server bootstrap so the SDK picked up during SSR
 // is re-used in the browser with identical runtime config and logging behaviour.
 import { initializeFlagship } from '@/utils/flagship'
@@ -119,6 +136,7 @@ const route = useRoute()
 const cart = useCart()
 const notifications = useNotifications()
 const { findBySlug } = useProducts()
+const { viewedProducts, addViewedProduct } = useViewedProducts()
 
 const { data: applePayFeature } = await useFetch<{ enabled: boolean }>('/api/features/apple-pay', {
   server: true,
@@ -132,6 +150,7 @@ const selectedSize = ref(product.sizes[0])
 // subsequent client checks overwrite it if the visitor’s decision changes.
 const applePayEnabled = ref(Boolean(applePayFeature.value?.enabled))
 const flagshipVisitor = ref<Visitor | null>(null)
+const viewedProductIds = viewedProducts
 
 const logTimestamp = () =>
   new Date().toLocaleTimeString('en-US', {
@@ -200,6 +219,7 @@ const runFlagship = async () => {
 if (import.meta.client) {
   onMounted(() => {
     runFlagship()
+    addViewedProduct(product.id)
   })
 }
 

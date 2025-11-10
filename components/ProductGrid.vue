@@ -83,7 +83,7 @@ const props = defineProps<{
   brands: string[]
   selectedBrand: string
   searchQuery: string
-  recommendationFilterField?: 'brand' | 'category'
+  recommendationFilterField?: 'brand' | 'homepage' | 'category'
 }>()
 
 const emit = defineEmits<{
