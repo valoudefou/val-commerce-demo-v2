@@ -31,6 +31,7 @@ export { setInterval } from '#app/compat/interval';
 export { definePageMeta } from '../node_modules/nuxt/dist/pages/runtime/composables';
 export { defineLazyHydrationComponent } from '#app/composables/lazy-hydration';
 export { useCart } from '../composables/useCart';
+export { useCategoryProducts } from '../composables/useCategoryProducts';
 export { useNotifications } from '../composables/useNotifications';
 export { useProducts } from '../composables/useProducts';
 export { slugifyBrand } from '../utils/brand';

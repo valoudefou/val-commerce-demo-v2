@@ -1,6 +1,6 @@
 <template>
   <section id="products" class="mt-20 space-y-8">
-    <RecommendationsCarousel />
+    <RecommendationsCarousel :filter-field="recommendationFilterField ?? 'brand'" :filter-value="selectedBrand" />
     <div class="flex flex-row flex-wrap items-start justify-between gap-6 sm:items-center">
       <div>
         <h2 class="section-title">Featured products</h2>
@@ -9,7 +9,7 @@
         </p>
       </div>
       <div class="max-w-full overflow-x-auto">
-        <div class="flex items-center gap-3 whitespace-nowrap text-sm">
+        <div class="flex items-center gap-3 whitespace-nowrap text-sm min-w-[720px]">
           <div class="flex-row-reverse sticky left-0 z-10 flex items-center gap-3 bg-[#f9fafc]">
             <button
               type="button"
@@ -36,21 +36,23 @@
               />
             </label>
           </div>
-          <button
-            v-for="filter in brands"
-            :key="filter"
-            type="button"
-            :aria-pressed="selectedBrand === filter"
-            class="rounded-full border px-4 py-2 text-sm font-medium transition"
-            :class="
-              selectedBrand === filter
-                ? 'border-primary-500 bg-primary-50 text-primary-600'
-                : 'border-slate-200 text-slate-600 hover:border-primary-400 hover:text-primary-600'
-            "
-            @click="emit('select-brand', filter)"
-          >
-            {{ filter }}
-          </button>
+          <div class="flex flex-1 items-center gap-3">
+            <button
+              v-for="filter in filteredFilters"
+              :key="filter"
+              type="button"
+              :aria-pressed="selectedBrand === filter"
+              class="rounded-full border px-4 py-2 text-sm font-medium transition"
+              :class="
+                selectedBrand === filter
+                  ? 'border-primary-500 bg-primary-50 text-primary-600'
+                  : 'border-slate-200 text-slate-600 hover:border-primary-400 hover:text-primary-600'
+              "
+              @click="emit('select-brand', filter)"
+            >
+              {{ filter }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -68,23 +70,35 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import ProductCard from '@/components/ProductCard.vue'
 import RecommendationsCarousel from '@/components/RecommendationsCarousel.vue'
 import type { Product } from '@/types/product'
 
-defineProps<{
+const props = defineProps<{
   products: Product[]
   loading: boolean
   error: string | null
   brands: string[]
   selectedBrand: string
   searchQuery: string
+  recommendationFilterField?: 'brand' | 'category'
 }>()
 
 const emit = defineEmits<{
   (event: 'select-brand', brand: string): void
   (event: 'search', query: string): void
 }>()
+
+const filteredFilters = computed(() => {
+  if (!props.searchQuery?.trim()) {
+    return props.brands
+  }
+
+  const query = props.searchQuery.toLowerCase()
+  return props.brands.filter((brand) => brand.toLowerCase().includes(query))
+})
 
 const onSearchInput = (event: Event) => {
   const target = event.target as HTMLInputElement

@@ -664,6 +664,8 @@ const _inlineRuntimeConfig = {
   "recommendations": {
     "apiKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzaXRlX2lkIjoxMDMxLCJpYXQiOjE3NDYyMDIyNjAsImp0aSI6ImxELWlKVmtaVnZlOVVkYk5tVzZfcXJXN3ExaUpQM3pPRzZYNjRJcGRWNTgifQ.7IfQu2cuGktA82hElpDvJXbwnOnwGqqh-BLdmzBGPb8",
     "endpoint": "https://uc-info.eu.abtasty.com/v1/reco/1031/recos/8d1ea373-571f-4d08-a9bf-04dda16383c2?fields=%5B%22price%22%2C%22name%22%2C%22img_link%22%2C%22absolute_link%22%5D",
+    "categoryEndpoint": "https://uc-info.eu.abtasty.com/v1/reco/1031/recos/85d0d2f8-2d66-4d1d-a376-80b4e6d5692c?fields=%5B%22price%22%2C%22name%22%2C%22img_link%22%2C%22absolute_link%22%5D",
+    "cartEndpoint": "https://uc-info.eu.abtasty.com/v1/reco/1031/recos/4fcf5e25-ea4e-4fea-90de-31860d544b00?fields=%5B%22price%22%2C%22name%22%2C%22img_link%22%2C%22absolute_link%22%5D",
     "siteUrl": "https://val-commerce-demo.vercel.app"
   }
 };
@@ -1883,6 +1885,7 @@ const _lazy_nJ6mvh = () => Promise.resolve().then(function () { return brands_ge
 const _lazy_lPJa6u = () => Promise.resolve().then(function () { return index_get$1; });
 const _lazy_Ucle06 = () => Promise.resolve().then(function () { return search_get$1; });
 const _lazy_le8oSY = () => Promise.resolve().then(function () { return recommendations_get$1; });
+const _lazy_uOQjhJ = () => Promise.resolve().then(function () { return recommendations_post$1; });
 const _lazy_8i5jFq = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
@@ -1894,6 +1897,7 @@ const handlers = [
   { route: '/api/products', handler: _lazy_lPJa6u, lazy: true, middleware: false, method: "get" },
   { route: '/api/products/search', handler: _lazy_Ucle06, lazy: true, middleware: false, method: "get" },
   { route: '/api/recommendations', handler: _lazy_le8oSY, lazy: true, middleware: false, method: "get" },
+  { route: '/api/recommendations', handler: _lazy_uOQjhJ, lazy: true, middleware: false, method: "post" },
   { route: '/__nuxt_error', handler: _lazy_8i5jFq, lazy: true, middleware: false, method: undefined },
   { route: '/__nuxt_island/**', handler: _SxA8c9, lazy: false, middleware: false, method: undefined },
   { route: '/**', handler: _lazy_8i5jFq, lazy: true, middleware: false, method: undefined }
@@ -2733,6 +2737,40 @@ const search_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProper
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const PLACEHOLDER_IMAGE = "https://assets-manager.abtasty.com/placeholder.png";
+const buildRecommendationUrl = (baseEndpoint, filter) => {
+  var _a, _b;
+  try {
+    const url = new URL(baseEndpoint);
+    const variables = {};
+    if ((filter == null ? void 0 : filter.field) === "cart_products") {
+      const ids = Array.isArray(filter.value) ? filter.value : [];
+      if (ids.length > 0) {
+        variables.cart_products = ids;
+      }
+      const categories = (_b = (_a = filter.categoriesInCart) == null ? void 0 : _a.map((category) => category.trim()).filter(Boolean)) != null ? _b : [];
+      if (categories.length > 0) {
+        variables["added_to_cart_product.category_id"] = categories;
+      }
+      if (typeof filter.addedToCartProductId === "number") {
+        variables.added_to_cart_product = [filter.addedToCartProductId];
+      }
+    } else {
+      const rawValue = typeof (filter == null ? void 0 : filter.value) === "string" ? filter.value : "";
+      const normalizedValue = rawValue.trim();
+      if (normalizedValue && normalizedValue.toLowerCase() !== "all") {
+        if ((filter == null ? void 0 : filter.field) === "category") {
+          variables.category_id = normalizedValue;
+        } else {
+          variables.brand = normalizedValue;
+        }
+      }
+    }
+    url.searchParams.set("variables", JSON.stringify(variables));
+    return url.toString();
+  } catch {
+    return baseEndpoint;
+  }
+};
 const slugify = (value, fallback) => {
   const normalized = value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return normalized.length > 0 ? normalized : fallback;
@@ -2806,20 +2844,36 @@ const normalizeItem = (item, index, catalog, fallbackIdSeed, siteUrl) => {
     externalUrl: absoluteLink
   };
 };
-const fetchRecommendations = async () => {
-  var _a, _b, _c, _d;
+const fetchRecommendations = async (filter) => {
+  var _a, _b, _c, _d, _e, _f, _g;
   const config = useRuntimeConfig();
   const apiKey = (_a = config.recommendations) == null ? void 0 : _a.apiKey;
   const endpoint = (_b = config.recommendations) == null ? void 0 : _b.endpoint;
-  const siteUrl = (_c = config.recommendations) == null ? void 0 : _c.siteUrl;
-  if (!apiKey || !endpoint) {
+  const categoryEndpoint = (_c = config.recommendations) == null ? void 0 : _c.categoryEndpoint;
+  const cartEndpoint = (_d = config.recommendations) == null ? void 0 : _d.cartEndpoint;
+  const siteUrl = (_e = config.recommendations) == null ? void 0 : _e.siteUrl;
+  let baseEndpoint = endpoint;
+  if ((filter == null ? void 0 : filter.field) === "category") {
+    baseEndpoint = categoryEndpoint || endpoint;
+  } else if ((filter == null ? void 0 : filter.field) === "cart_products") {
+    baseEndpoint = cartEndpoint || endpoint;
+  }
+  if (!apiKey || !baseEndpoint) {
     throw createError({
       statusCode: 500,
       statusMessage: "Recommendation credentials are missing. Please configure runtimeConfig.recommendations."
     });
   }
-  try {
-    const response = await $fetch(endpoint, {
+  const performFetch = async (activeFilter) => {
+    var _a2, _b2, _c2, _d2, _e2;
+    const requestUrl = buildRecommendationUrl(baseEndpoint, activeFilter);
+    console.log("[Recommendations] Fetching AB Tasty feed", {
+      endpoint: requestUrl,
+      field: (_b2 = (_a2 = activeFilter == null ? void 0 : activeFilter.field) != null ? _a2 : filter == null ? void 0 : filter.field) != null ? _b2 : "brand",
+      value: (_c2 = activeFilter == null ? void 0 : activeFilter.value) != null ? _c2 : filter == null ? void 0 : filter.value,
+      categories: (_d2 = activeFilter == null ? void 0 : activeFilter.categoriesInCart) != null ? _d2 : filter == null ? void 0 : filter.categoriesInCart
+    });
+    const response = await $fetch(requestUrl, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         Accept: "application/json"
@@ -2838,28 +2892,114 @@ const fetchRecommendations = async () => {
       (item, index, self) => self.findIndex((candidate) => candidate.id === item.id) === index
     );
     return {
-      title: ((_d = response.name) == null ? void 0 : _d.trim()) || "Recommended for you",
+      title: ((_e2 = response.name) == null ? void 0 : _e2.trim()) || "Recommended for you",
       items: normalizedItems
     };
+  };
+  try {
+    return await performFetch(filter);
   } catch (error) {
-    if (error instanceof Error && "statusCode" in error) {
+    const statusCode = error == null ? void 0 : error.statusCode;
+    const shouldRetryWithoutCartContext = (filter == null ? void 0 : filter.field) === "cart_products" && statusCode && statusCode >= 400 && (((_g = (_f = filter.categoriesInCart) == null ? void 0 : _f.length) != null ? _g : 0) > 0 || typeof filter.addedToCartProductId === "number");
+    if (shouldRetryWithoutCartContext) {
+      console.warn("Cart recommendation request failed, retrying without cart context");
+      return await performFetch({
+        ...filter,
+        categoriesInCart: void 0,
+        addedToCartProductId: void 0
+      });
+    }
+    if (statusCode) {
+      if ((filter == null ? void 0 : filter.field) === "cart_products") {
+        console.error("Cart recommendations unavailable, returning empty set", error);
+        return {
+          title: "Recommended for you",
+          items: []
+        };
+      }
       throw error;
     }
-    console.error("Failed to load recommendations", error);
-    throw createError({
-      statusCode: 502,
-      statusMessage: "Unable to load recommendations right now."
-    });
+    console.error("Failed to load recommendations, returning empty set", error);
+    return {
+      title: "Recommended for you",
+      items: []
+    };
   }
 };
+const normalizeFilterFromSource = (sourceField, sourceValue, categories, addedToCartProduct) => {
+  let field = "brand";
+  if (sourceField === "category") {
+    field = "category";
+  } else if (sourceField === "cart_products") {
+    field = "cart_products";
+  }
+  let value;
+  if (field === "cart_products") {
+    if (Array.isArray(sourceValue)) {
+      value = sourceValue.filter((id) => Number.isFinite(Number(id))).map((id) => Number(id));
+    } else if (typeof sourceValue === "string") {
+      value = sourceValue.split(",").map((id) => Number(id.trim())).filter((id) => Number.isFinite(id));
+    }
+  } else if (typeof sourceValue === "string") {
+    value = sourceValue;
+  }
+  let categoriesInCart;
+  if (field === "cart_products" && categories) {
+    const arr = Array.isArray(categories) ? categories : typeof categories === "string" ? [categories] : [];
+    const normalized = arr.map((category) => typeof category === "string" ? category.trim() : "").filter((category) => category.length > 0);
+    if (normalized.length > 0) {
+      categoriesInCart = normalized;
+    }
+  }
+  let addedToCartProductId;
+  if (field === "cart_products" && addedToCartProduct !== void 0) {
+    const parsed = Number(addedToCartProduct);
+    if (Number.isFinite(parsed)) {
+      addedToCartProductId = parsed;
+    }
+  }
+  return { field, value, categoriesInCart, addedToCartProductId };
+};
+const handleRecommendationsRequest = async (event, method) => {
+  var _a, _b;
+  if (method === "GET") {
+    const query = getQuery$1(event);
+    return await fetchRecommendations(
+      normalizeFilterFromSource(
+        query.filterField,
+        query.filterValue,
+        query.categoriesInCart,
+        query.addedToCartProductId
+      )
+    );
+  }
+  const body = await readBody(event);
+  return await fetchRecommendations(
+    normalizeFilterFromSource(
+      body == null ? void 0 : body.filterField,
+      body == null ? void 0 : body.filterValue,
+      (_a = body == null ? void 0 : body.categoriesInCart) != null ? _a : void 0,
+      (_b = body == null ? void 0 : body.addedToCartProductId) != null ? _b : void 0
+    )
+  );
+};
 
-const recommendations_get = defineEventHandler(async () => {
-  return await fetchRecommendations();
+const recommendations_get = defineEventHandler(async (event) => {
+  return await handleRecommendationsRequest(event, "GET");
 });
 
 const recommendations_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: recommendations_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const recommendations_post = defineEventHandler(async (event) => {
+  return await handleRecommendationsRequest(event, "POST");
+});
+
+const recommendations_post$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: recommendations_post
 }, Symbol.toStringTag, { value: 'Module' }));
 
 function renderPayloadResponse(ssrContext) {

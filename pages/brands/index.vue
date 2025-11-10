@@ -3,14 +3,14 @@
     <section class="rounded-3xl bg-white p-10 shadow-xl ring-1 ring-slate-100">
       <div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
         <div>
-          <p class="text-sm font-semibold uppercase tracking-[0.25em] text-primary-500">Our Collection</p>
-          <h1 class="mt-4 text-4xl font-semibold text-slate-900">Discover every product</h1>
+          <p class="text-sm font-semibold uppercase tracking-[0.25em] text-primary-500">Our Brands</p>
+          <h1 class="mt-4 text-4xl font-semibold text-slate-900">Discover every label we feature</h1>
           <p class="mt-4 text-base leading-7 text-slate-600">
-            Filter by brand, search for specific styles, and explore the entire assortment without scrolling through the landing page.
+            Filter across partner brands, search for signature styles, and browse the full assortment without scrolling through the landing page.
           </p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-sm leading-6 text-slate-600">
-          <p class="font-semibold text-slate-900">How filtering works</p>
+          <p class="font-semibold text-slate-900">How Brand filtering works</p>
           <p class="mt-2">
             Selecting a brand updates the product list instantly. Use the search box for fabrics, colors, or product names to narrow things even faster.
           </p>

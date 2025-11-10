@@ -39,6 +39,7 @@
           </div>
         </li>
       </ul>
+
     </section>
 
     <aside class="space-y-6">
@@ -77,14 +78,43 @@
         </p>
       </div>
     </aside>
+    <section class="lg:col-span-2">
+      <h2 class="text-xl font-semibold text-slate-900">Because you added these</h2>
+      <p class="mt-2 text-sm text-slate-600">Inspired picks based on what is currently in your bag.</p>
+      <div class="mt-8">
+        <RecommendationsCarousel
+          :filter-field="'cart_products'"
+          :filter-value="cartProductIds"
+          :cart-categories="cartCategories"
+          :added-to-cart-product-id="addedToCartProductId"
+        />
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ShoppingBagIcon } from '@heroicons/vue/24/outline'
 
+import RecommendationsCarousel from '@/components/RecommendationsCarousel.vue'
+
 const config = useRuntimeConfig()
 const { items, subtotal, updateQuantity, removeItem } = useCart()
+const cartProductIds = computed(() => items.value.map((item) => item.id))
+const cartCategories = computed(() => {
+  const seen = new Set<string>()
+  for (const item of items.value) {
+    const category = item.category?.trim()
+    if (category) {
+      seen.add(category)
+    }
+  }
+  return Array.from(seen)
+})
+const addedToCartProductId = computed(() => {
+  const ids = cartProductIds.value
+  return ids.length ? ids[ids.length - 1] : null
+})
 
 const increase = (id: number) => {
   const item = items.value.find((product) => product.id === id)

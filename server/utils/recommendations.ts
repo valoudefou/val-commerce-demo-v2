@@ -1,6 +1,8 @@
-import type { Product } from '@/types/product'
 import { createError, useRuntimeConfig } from '#imports'
+import { getQuery, readBody } from 'h3'
+import type { H3Event } from 'h3'
 
+import type { Product } from '@/types/product'
 import { fetchProducts } from '@/server/utils/products'
 
 type RawRecommendation = {
@@ -27,6 +29,49 @@ export type RecommendationResponse = {
 }
 
 const PLACEHOLDER_IMAGE = 'https://assets-manager.abtasty.com/placeholder.png'
+
+type RecommendationFilter = {
+  field: 'brand' | 'category' | 'cart_products'
+  value?: string | number[]
+  categoriesInCart?: string[]
+  addedToCartProductId?: number | null
+}
+
+const buildRecommendationUrl = (baseEndpoint: string, filter?: RecommendationFilter) => {
+  try {
+    const url = new URL(baseEndpoint)
+    const variables: Record<string, string | number[] | string[] | undefined> = {}
+    if (filter?.field === 'cart_products') {
+      const ids = Array.isArray(filter.value) ? filter.value : []
+      if (ids.length > 0) {
+        variables.cart_products = ids
+      }
+      const categories = filter.categoriesInCart?.map((category) => category.trim()).filter(Boolean) ?? []
+      if (categories.length > 0) {
+        variables['added_to_cart_product.category_id'] = categories
+      }
+      if (typeof filter.addedToCartProductId === 'number') {
+        variables.added_to_cart_product = [filter.addedToCartProductId]
+      }
+    } else {
+      const rawValue = typeof filter?.value === 'string' ? filter.value : ''
+      const normalizedValue = rawValue.trim()
+
+      if (normalizedValue && normalizedValue.toLowerCase() !== 'all') {
+        if (filter?.field === 'category') {
+          variables.category_id = normalizedValue
+        } else {
+          variables.brand = normalizedValue
+        }
+      }
+    }
+
+    url.searchParams.set('variables', JSON.stringify(variables))
+    return url.toString()
+  } catch {
+    return baseEndpoint
+  }
+}
 
 const slugify = (value: string, fallback: string) => {
   const normalized = value
@@ -130,13 +175,24 @@ const normalizeItem = (
   }
 }
 
-export const fetchRecommendations = async (): Promise<RecommendationResponse> => {
+export const fetchRecommendations = async (
+  filter?: RecommendationFilter
+): Promise<RecommendationResponse> => {
   const config = useRuntimeConfig()
   const apiKey = config.recommendations?.apiKey
   const endpoint = config.recommendations?.endpoint
+  const categoryEndpoint = config.recommendations?.categoryEndpoint
+  const cartEndpoint = config.recommendations?.cartEndpoint
   const siteUrl = config.recommendations?.siteUrl
 
-  if (!apiKey || !endpoint) {
+  let baseEndpoint = endpoint
+  if (filter?.field === 'category') {
+    baseEndpoint = categoryEndpoint || endpoint
+  } else if (filter?.field === 'cart_products') {
+    baseEndpoint = cartEndpoint || endpoint
+  }
+
+  if (!apiKey || !baseEndpoint) {
     throw createError({
       statusCode: 500,
       statusMessage:
@@ -144,8 +200,19 @@ export const fetchRecommendations = async (): Promise<RecommendationResponse> =>
     })
   }
 
-  try {
-    const response = await $fetch<{ name?: string; items?: RawRecommendation[] }>(endpoint, {
+  let lastRequestUrl: string | null = null
+
+  const performFetch = async (activeFilter?: RecommendationFilter) => {
+    const requestUrl = buildRecommendationUrl(baseEndpoint, activeFilter)
+    lastRequestUrl = requestUrl
+    console.log('[Recommendations] Fetching AB Tasty feed', {
+      endpoint: requestUrl,
+      field: activeFilter?.field ?? filter?.field ?? 'brand',
+      value: activeFilter?.value ?? filter?.value,
+      categories: activeFilter?.categoriesInCart ?? filter?.categoriesInCart
+    })
+
+    const response = await $fetch<{ name?: string; items?: RawRecommendation[] }>(requestUrl, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         Accept: 'application/json'
@@ -173,15 +240,123 @@ export const fetchRecommendations = async (): Promise<RecommendationResponse> =>
       title: response.name?.trim() || 'Recommended for you',
       items: normalizedItems
     }
+  }
+
+  try {
+    return await performFetch(filter)
   } catch (error) {
-    if (error instanceof Error && 'statusCode' in error) {
+    const statusCode = (error as { statusCode?: number })?.statusCode
+
+    const shouldRetryWithoutCartContext =
+      filter?.field === 'cart_products'
+      && statusCode
+      && statusCode >= 400
+      && ((filter.categoriesInCart?.length ?? 0) > 0 || typeof filter.addedToCartProductId === 'number')
+
+    if (shouldRetryWithoutCartContext) {
+      console.warn('Cart recommendation request failed, retrying without cart context')
+
+      return await performFetch({
+        ...filter,
+        categoriesInCart: undefined,
+        addedToCartProductId: undefined
+      })
+    }
+
+    if (statusCode) {
+      if (filter?.field === 'cart_products') {
+        console.error('Cart recommendations unavailable, returning empty set', error)
+        return {
+          title: 'Recommended for you',
+          items: []
+        }
+      }
       throw error
     }
 
-    console.error('Failed to load recommendations', error)
-    throw createError({
-      statusCode: 502,
-      statusMessage: 'Unable to load recommendations right now.'
-    })
+    console.error('Failed to load recommendations, returning empty set', error)
+    return {
+      title: 'Recommended for you',
+      items: []
+    }
   }
+}
+
+const normalizeFilterFromSource = (
+  sourceField: unknown,
+  sourceValue: unknown,
+  categories?: unknown,
+  addedToCartProduct?: unknown
+): RecommendationFilter => {
+  let field: RecommendationFilter['field'] = 'brand'
+  if (sourceField === 'category') {
+    field = 'category'
+  } else if (sourceField === 'cart_products') {
+    field = 'cart_products'
+  }
+
+  let value: RecommendationFilter['value']
+  if (field === 'cart_products') {
+    if (Array.isArray(sourceValue)) {
+      value = sourceValue.filter((id) => Number.isFinite(Number(id))).map((id) => Number(id))
+    } else if (typeof sourceValue === 'string') {
+      value = sourceValue
+        .split(',')
+        .map((id) => Number(id.trim()))
+        .filter((id) => Number.isFinite(id))
+    }
+  } else if (typeof sourceValue === 'string') {
+    value = sourceValue
+  }
+
+  let categoriesInCart: string[] | undefined
+  if (field === 'cart_products' && categories) {
+    const arr = Array.isArray(categories) ? categories : typeof categories === 'string' ? [categories] : []
+    const normalized = arr
+      .map((category) => (typeof category === 'string' ? category.trim() : ''))
+      .filter((category) => category.length > 0)
+    if (normalized.length > 0) {
+      categoriesInCart = normalized
+    }
+  }
+
+  let addedToCartProductId: number | undefined
+  if (field === 'cart_products' && addedToCartProduct !== undefined) {
+    const parsed = Number(addedToCartProduct)
+    if (Number.isFinite(parsed)) {
+      addedToCartProductId = parsed
+    }
+  }
+
+  return { field, value, categoriesInCart, addedToCartProductId }
+}
+
+export const handleRecommendationsRequest = async (event: H3Event, method: 'GET' | 'POST') => {
+  if (method === 'GET') {
+    const query = getQuery(event)
+    return await fetchRecommendations(
+      normalizeFilterFromSource(
+        query.filterField,
+        query.filterValue,
+        query.categoriesInCart,
+        query.addedToCartProductId
+      )
+    )
+  }
+
+  const body = await readBody<{
+    filterField?: string
+    filterValue?: string | number[] | number | null
+    categoriesInCart?: string[] | string | null
+    addedToCartProductId?: number | string | null
+  }>(event)
+
+  return await fetchRecommendations(
+    normalizeFilterFromSource(
+      body?.filterField,
+      body?.filterValue,
+      body?.categoriesInCart ?? undefined,
+      body?.addedToCartProductId ?? undefined
+    )
+  )
 }

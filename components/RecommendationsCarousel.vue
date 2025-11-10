@@ -137,34 +137,145 @@ type RecommendationPayload = {
   items: RecommendationItem[]
 }
 
+const props = defineProps<{
+  filterValue?: string | number[] | number
+  filterField?: 'brand' | 'category' | 'cart_products'
+  cartCategories?: string[]
+  addedToCartProductId?: number | null
+}>()
+
 const headingState = useState<string>('recommendations-heading', () => 'Recommended for you')
 const recommendations = useState<RecommendationItem[]>('recommendations-items', () => [])
 const recommendationsLoaded = useState<boolean>('recommendations-loaded', () => false)
 const recommendationsLoading = useState<boolean>('recommendations-loading', () => false)
 const recommendationsError = useState<string | null>('recommendations-error', () => null)
+const recommendationsFilterKey = useState<string>('recommendations-filter-key', () => '')
 
-const ensureRecommendations = async () => {
-  if (recommendationsLoaded.value || recommendationsLoading.value) {
+const activeFilterValue = computed(() => props.filterValue ?? 'All')
+const activeFilterField = computed<'brand' | 'category' | 'cart_products'>(() => props.filterField ?? 'brand')
+const cartCategoryFilters = computed(() => props.cartCategories ?? [])
+const addedToCartProductId = computed(() => props.addedToCartProductId ?? null)
+
+const normalizeFilterValue = (value?: string | number[] | number, field?: string) => {
+  if (field === 'cart_products') {
+    const arr = Array.isArray(value) ? value : typeof value === 'number' ? [value] : []
+    return arr.filter((item) => Number.isFinite(item)).map((item) => Number(item))
+  }
+
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  const trimmed = value.trim()
+  if (!trimmed || trimmed.toLowerCase() === 'all') {
+    return ''
+  }
+  return trimmed
+}
+
+const getFilterKey = (value: string | number[] | number, field: string) => {
+  if (field === 'cart_products') {
+    const arr = Array.isArray(value) ? value : typeof value === 'number' ? [value] : []
+    return `${field}:${arr.sort().join(',')}`
+  }
+  if (typeof value === 'string') {
+    return `${field}:${value.trim().toLowerCase()}`
+  }
+  return field
+}
+
+const normalizeCategories = (categories: string[]) => {
+  const set = new Set<string>()
+  for (const category of categories) {
+    const trimmed = category.trim()
+    if (trimmed) {
+      set.add(trimmed)
+    }
+  }
+  return Array.from(set)
+}
+
+
+let recommendationsRequestId = 0
+
+const ensureRecommendations = async (
+  value?: string | number[] | number,
+  field?: 'brand' | 'category' | 'cart_products'
+) => {
+  const normalizedValue = normalizeFilterValue(value, field)
+  const filterField = field ?? activeFilterField.value
+  const normalizedCategories =
+    filterField === 'cart_products' ? normalizeCategories(cartCategoryFilters.value) : []
+  const normalizedAddedProductId =
+    filterField === 'cart_products' ? addedToCartProductId.value : null
+
+  if (
+    filterField === 'cart_products'
+    && Array.isArray(normalizedValue)
+    && normalizedValue.length === 0
+  ) {
+    recommendations.value = []
+    recommendationsLoaded.value = true
+    recommendationsFilterKey.value = filterField
+    recommendationsError.value = null
     return
   }
 
+  const hasValue =
+    normalizedValue && (Array.isArray(normalizedValue) ? normalizedValue.length > 0 : true)
+
+  let filterKey = hasValue ? getFilterKey(normalizedValue, filterField) : filterField
+  if (filterField === 'cart_products' && normalizedCategories.length > 0) {
+    filterKey += `|categories:${normalizedCategories.sort().join(',')}`
+  }
+  if (filterField === 'cart_products' && normalizedAddedProductId !== null) {
+    filterKey += `|added:${normalizedAddedProductId}`
+  }
+
+  if (recommendationsLoaded.value && recommendationsFilterKey.value === filterKey) {
+    return
+  }
+
+  const requestId = ++recommendationsRequestId
   recommendationsLoading.value = true
   recommendationsError.value = null
 
   try {
-    const payload = await $fetch<RecommendationPayload>('/api/recommendations')
+    const payload = await $fetch<RecommendationPayload>('/api/recommendations', {
+      method: 'POST',
+      body: {
+        filterField,
+        filterValue: normalizedValue ?? null,
+        categoriesInCart: filterField === 'cart_products' ? normalizedCategories : undefined,
+        addedToCartProductId:
+          filterField === 'cart_products' && normalizedAddedProductId !== null
+            ? normalizedAddedProductId
+            : undefined
+      }
+    })
+
+    if (requestId !== recommendationsRequestId) {
+      return
+    }
+
     headingState.value = payload?.title ?? 'Recommended for you'
     recommendations.value = payload?.items ?? []
+    recommendationsFilterKey.value = filterKey
     recommendationsLoaded.value = true
   } catch (err) {
-    console.error('Failed to load recommendations', err)
-    recommendationsError.value = 'Unable to load recommendations right now.'
+    if (requestId === recommendationsRequestId) {
+      console.error('Failed to load recommendations', err)
+      recommendationsError.value = 'Unable to load recommendations right now.'
+      recommendationsFilterKey.value = ''
+    }
   } finally {
-    recommendationsLoading.value = false
+    if (requestId === recommendationsRequestId) {
+      recommendationsLoading.value = false
+    }
   }
 }
 
-await ensureRecommendations()
+await ensureRecommendations(activeFilterValue.value, activeFilterField.value)
 
 const heading = computed(() => headingState.value)
 
@@ -261,6 +372,32 @@ watch(
   () => recommendations.value.length,
   () => {
     void syncCarousel()
+  }
+)
+
+watch(
+  () => [activeFilterValue.value, activeFilterField.value, cartCategoryFilters.value, addedToCartProductId.value] as const,
+  ([value, field, , addedId]) => {
+    const normalizedValue = normalizeFilterValue(value, field)
+    const normalizedCategories =
+      field === 'cart_products' ? normalizeCategories(cartCategoryFilters.value) : []
+    let filterKey =
+      normalizedValue && (Array.isArray(normalizedValue) ? normalizedValue.length > 0 : true)
+        ? getFilterKey(normalizedValue, field)
+        : field
+
+    if (field === 'cart_products' && normalizedCategories.length > 0) {
+      filterKey += `|categories:${normalizedCategories.sort().join(',')}`
+    }
+    if (field === 'cart_products' && typeof addedId === 'number') {
+      filterKey += `|added:${addedId}`
+    }
+
+    if (filterKey === recommendationsFilterKey.value) {
+      return
+    }
+    recommendationsLoaded.value = false
+    void ensureRecommendations(value, field)
   }
 )
 

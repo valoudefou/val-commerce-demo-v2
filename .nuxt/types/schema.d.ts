@@ -98,6 +98,10 @@ declare module 'nuxt/schema' {
 
       endpoint: string,
 
+      categoryEndpoint: string,
+
+      cartEndpoint: string,
+
       siteUrl: string,
    },
 
