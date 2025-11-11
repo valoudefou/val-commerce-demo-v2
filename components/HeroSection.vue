@@ -10,8 +10,8 @@
           Discover performance-crafted apparel and accessories designed to transition seamlessly from morning commutes to weekend escapes.
         </p>
         <div class="mt-8 flex flex-wrap gap-4">
-          <NuxtLink to="/brands" class="inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-primary-600 shadow-sm hover:bg-slate-100">
-            Explore brands
+          <NuxtLink to="/categories" class="inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-primary-600 shadow-sm hover:bg-slate-100">
+            Explore categories
           </NuxtLink>
           <NuxtLink to="/journal" class="inline-flex items-center rounded-full border border-white/70 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10">
             Read journal

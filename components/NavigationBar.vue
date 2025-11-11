@@ -35,7 +35,6 @@ const { totalItems } = useCart()
 
 const navigation = [
   { label: 'Home', href: '/' },
-  { label: 'Brands', href: '/brands' },
   { label: 'Categories', href: '/categories' },
   { label: 'About', href: '/about' },
   { label: 'Journal', href: '/journal' }

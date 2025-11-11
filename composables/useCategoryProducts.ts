@@ -19,16 +19,51 @@ const filterByCategory = (collection: Product[], category: string) => {
   return collection.filter((product) => product.category?.toLowerCase() === target)
 }
 
+const deriveBrands = (collection: Product[]) => {
+  const unique = new Set<string>()
+  for (const item of collection) {
+    if (item.brand) {
+      unique.add(item.brand)
+    }
+  }
+  return Array.from(unique).sort((a, b) => a.localeCompare(b))
+}
+
+const filterByBrand = (collection: Product[], brand: string) => {
+  if (brand === 'All') {
+    return collection
+  }
+
+  const target = brand.toLowerCase()
+  return collection.filter((product) => product.brand?.toLowerCase() === target)
+}
+
 export const useCategoryProducts = () => {
   const products = useState<Product[]>('category-products', () => [])
   const allProducts = useState<Product[]>('category-all-products', () => [])
   const categories = useState<string[]>('product-categories', () => [])
+  const brands = useState<string[]>('category-brands', () => [])
   const selectedCategory = useState<string>('selected-category', () => 'All')
+  const selectedBrand = useState<string>('selected-brand', () => 'All')
   const searchQuery = useState<string>('category-search-query', () => '')
   const searchResults = useState<Product[]>('category-search-results', () => [])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const hasFetched = useState<boolean>('category-has-fetched', () => false)
+
+  const applyFilters = (collection: Product[]) => {
+    const brandFiltered = filterByBrand(collection, selectedBrand.value)
+    return filterByCategory(brandFiltered, selectedCategory.value)
+  }
+
+  const refreshCategories = (collection: Product[]) => {
+    const brandScoped = selectedBrand.value === 'All' ? collection : filterByBrand(collection, selectedBrand.value)
+    const derived = deriveCategories(brandScoped)
+    categories.value = derived
+    if (selectedCategory.value !== 'All' && !derived.includes(selectedCategory.value)) {
+      selectedCategory.value = 'All'
+    }
+  }
 
   const fetchProducts = async () => {
     if (hasFetched.value) {
@@ -43,9 +78,12 @@ export const useCategoryProducts = () => {
       allProducts.value = response
       products.value = response
       categories.value = deriveCategories(response)
+      brands.value = deriveBrands(response)
       selectedCategory.value = 'All'
+      selectedBrand.value = 'All'
       searchQuery.value = ''
       searchResults.value = []
+      refreshCategories(response)
       hasFetched.value = true
     } catch (err) {
       console.error('Failed to load products for categories view', err)
@@ -60,7 +98,7 @@ export const useCategoryProducts = () => {
     error.value = null
 
     const baseCollection = searchQuery.value ? searchResults.value : allProducts.value
-    const filtered = filterByCategory(baseCollection, category)
+    const filtered = applyFilters(baseCollection)
     products.value = filtered
 
     if (filtered.length === 0) {
@@ -71,6 +109,23 @@ export const useCategoryProducts = () => {
     }
   }
 
+  const selectBrand = (brand: string) => {
+    selectedBrand.value = brand
+    error.value = null
+
+    const baseCollection = searchQuery.value ? searchResults.value : allProducts.value
+    refreshCategories(baseCollection)
+    const filtered = applyFilters(baseCollection)
+    products.value = filtered
+
+    if (filtered.length === 0) {
+      error.value =
+        brand === 'All'
+          ? 'No products available for the current filters.'
+          : `No products from "${brand}" match the current filters.`
+    }
+  }
+
   const searchProducts = async (query: string) => {
     const trimmed = query.trim()
     searchQuery.value = trimmed
@@ -78,6 +133,7 @@ export const useCategoryProducts = () => {
 
     if (!trimmed) {
       searchResults.value = []
+      refreshCategories(allProducts.value)
       selectCategory(selectedCategory.value)
       return
     }
@@ -90,7 +146,8 @@ export const useCategoryProducts = () => {
       })
 
       searchResults.value = response.products
-      const filtered = filterByCategory(response.products, selectedCategory.value)
+      refreshCategories(response.products)
+      const filtered = applyFilters(response.products)
       products.value = filtered
 
       if (filtered.length === 0) {
@@ -110,12 +167,15 @@ export const useCategoryProducts = () => {
   return {
     products,
     categories,
+    brands,
     selectedCategory,
+    selectedBrand,
     searchQuery,
     loading,
     error,
     fetchProducts,
     selectCategory,
+    selectBrand,
     searchProducts
   }
 }
