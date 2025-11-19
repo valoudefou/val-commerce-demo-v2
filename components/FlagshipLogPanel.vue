@@ -69,7 +69,7 @@
                 class="rounded-full border border-emerald-500/30 bg-transparent px-3 py-1.5 text-sm font-medium uppercase tracking-[0.2em] text-emerald-300 transition hover:border-emerald-400 hover:text-emerald-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400"
                 @click="isOpen = false"
               >
-                HIDE - PRESS L
+                LOGS - PRESS L
               </button>
             </div>
           </header>
