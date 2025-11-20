@@ -79,6 +79,7 @@
           @click="beginApplePay"
         >
           <span aria-hidden="true" class="apple-pay-button__fallback">
+            <span class="apple-pay-button__fallback-label">Buy with</span>
             <span class="apple-pay-button__icon">
               <svg
                 viewBox="-76.79115 -52.55 665.5233 315.3"
@@ -92,7 +93,6 @@
                 />
               </svg>
             </span>
-            <span class="apple-pay-button__fallback-label">Buy with Apple&nbsp;Pay</span>
           </span>
           <span class="sr-only">Buy now with Apple Pay</span>
         </button>
@@ -358,10 +358,6 @@ useHead({ title: `${product.name} – Val Commerce` })
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1.2;
 }
 
 .apple-pay-button__icon {
@@ -378,5 +374,8 @@ useHead({ title: `${product.name} – Val Commerce` })
 .apple-pay-button__fallback-label {
   font-family: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
 }
 </style>
