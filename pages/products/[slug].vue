@@ -333,9 +333,6 @@ useHead({ title: `${product.name} – Val Commerce` })
   letter-spacing: 0.04em;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   appearance: none;
-  -webkit-appearance: -apple-pay-button;
-  -apple-pay-button-type: buy;
-  -apple-pay-button-style: black;
 }
 
 .apple-pay-button:is(:hover, :focus-visible) {
@@ -381,25 +378,5 @@ useHead({ title: `${product.name} – Val Commerce` })
 .apple-pay-button__fallback-label {
   font-family: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 600;
-}
-
-@supports not (-webkit-appearance: -apple-pay-button) {
-  .apple-pay-button {
-    background-color: #000;
-  }
-}
-
-@supports (-webkit-appearance: -apple-pay-button) {
-  /* Hide custom fallback text/icon when native Apple Pay button renders */
-  .apple-pay-button__fallback {
-    display: none;
-  }
-
-  /* Remove overlapping text rendered by the browser */
-  .apple-pay-button {
-    color: transparent;
-    font-size: 0;
-    line-height: 0;
-  }
 }
 </style>
